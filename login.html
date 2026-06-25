@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión · Juárez Observa</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="auth">
+
+  <!-- ============ PANEL DE MARCA ============ -->
+  <section class="auth__showcase">
+    <div class="watch-grid" id="loginGrid" aria-hidden="true">
+      <div class="watch-grid__lines"></div>
+      <div class="watch-grid__glow"></div>
+    </div>
+
+    <div class="auth__showcase-content">
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <p class="auth__eyebrow" style="margin-top:40px;">Plataforma ciudadana de reportes urbanos</p>
+      <h1 class="auth__headline">Cada bache, cada foco apagado, <em>cada reporte cuenta.</em></h1>
+      <p class="auth__lede">
+        Inicia sesión para dar seguimiento a tus reportes, ver el estado de tu colonia
+        y ayudar a que Ciudad Juárez responda más rápido.
+      </p>
+    </div>
+
+    <div class="auth__stats">
+      <div>
+        <div class="auth__stat-value">12,480</div>
+        <div class="auth__stat-label">Reportes recibidos</div>
+      </div>
+      <div>
+        <div class="auth__stat-value">8,962</div>
+        <div class="auth__stat-label">Resueltos</div>
+      </div>
+      <div>
+        <div class="auth__stat-value">9</div>
+        <div class="auth__stat-label">Dependencias conectadas</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL DE FORMULARIO ============ -->
+  <section class="auth__panel">
+    <div class="auth__form-wrap">
+
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <h2 class="auth__title">Inicia sesión</h2>
+      <p class="auth__subtitle">Accede a tu cuenta para reportar y dar seguimiento a incidentes en tu colonia.</p>
+
+      <div class="alert" id="loginAlert"></div>
+
+      <!-- ✅ FIX: quitado action="javascript:void(0)" y novalidate para que submit funcione -->
+      <form id="formLogin" novalidate>
+
+        <!-- 4.2.6 VERIFICACIÓN DE CORREO -->
+        <div class="field" id="campoCorreo">
+          <label for="correo">Correo electrónico</label>
+          <input class="input" type="email" id="correo" name="correo"
+                 placeholder="tu@correo.com" autocomplete="email" required>
+          <span class="field-error" id="errorCorreo"></span>
+        </div>
+
+        <div class="field" id="campoPassword">
+          <label for="password">Contraseña</label>
+          <div class="input-group">
+            <input class="input" type="password" id="password" name="password"
+                   placeholder="••••••••" autocomplete="current-password" required minlength="8">
+            <button type="button" class="input-group__action" data-toggle-password="password">MOSTRAR</button>
+          </div>
+          <span class="field-error" id="errorPassword"></span>
+        </div>
+
+        <!-- 4.2.7 CAPTCHA -->
+        <div class="field" id="campoCaptcha">
+          <label for="captchaInput">Verificación de seguridad</label>
+          <div class="captcha">
+            <canvas id="captchaCanvas" width="200" height="60"
+                    style="border-radius:6px; border:1px solid #ddd;"></canvas>
+            <button type="button" class="captcha__refresh" id="captchaRefresh"
+                    title="Generar nuevo código" aria-label="Generar nuevo código"
+                    onclick="generarCaptchaCanvas()">↻</button>
+            <input class="input" type="text" id="captchaInput" name="captcha"
+                   placeholder="Escribe el código" autocomplete="off"
+                   style="text-transform:uppercase; letter-spacing:2px;" required>
+          </div>
+          <span class="field-error" id="errorCaptcha"></span>
+          <span id="contadorIntentos" style="font-size:12px; color:#666; margin-top:4px; display:none;"></span>
+        </div>
+
+        <div class="field" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <label class="checkbox-row" for="recordarme">
+            <input type="checkbox" id="recordarme" name="recordarme">
+            Recordarme
+          </label>
+          <a href="recuperar.html">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <!-- ✅ FIX: type="submit" en lugar de type="button" + quitado onclick duplicado -->
+        <button type="submit" class="btn btn--primary btn--block" id="btnSubmit">
+          Iniciar sesión
+        </button>
+
+      </form>
+
+      <div class="auth__divider">o</div>
+
+      <p class="auth__foot">
+        ¿Aún no tienes cuenta? <a href="registro.html">Regístrate como ciudadano</a>
+      </p>
+      <p class="auth__foot">
+        ¿Eres parte de una institución? <a href="login.html">Inicia sesión aquí</a> con tu correo institucional
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+
+  // ══════════════════════════════════════════════════════════════
+  // ESTADO GLOBAL
+  // ══════════════════════════════════════════════════════════════
+  let _bloqueado       = false;
+  let _intentosCaptcha = 0;
+  const _MAX_INTENTOS  = 3;
+  let _timerBloqueo    = null;
+  let _captchaValor    = '';
+
+  // ══════════════════════════════════════════════════════════════
+  // INICIALIZACIÓN — ✅ FIX: todo dentro de DOMContentLoaded
+  // ══════════════════════════════════════════════════════════════
+  document.addEventListener('DOMContentLoaded', () => {
+
+    // Retícula decorativa
+    pintarRetícula('loginGrid', 16);
+
+    // Captcha inicial
+    generarCaptchaCanvas();
+
+    // Validación en tiempo real del correo
+    const inputCorreo = document.getElementById('correo');
+    inputCorreo.addEventListener('blur', () => {
+      verificarFormatoCorreo(inputCorreo.value.trim());
+    });
+    inputCorreo.addEventListener('input', () => {
+      const campo = document.getElementById('campoCorreo');
+      if (campo.classList.contains('field--error')) limpiarError(campo);
+    });
+
+    // ✅ FIX: un solo listener de submit, sin onclick duplicado en el botón
+    document.getElementById('formLogin').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleLogin();
+    });
+
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  // 4.2.7 CAPTCHA
+  // ══════════════════════════════════════════════════════════════
+  function generarCaptchaCanvas(canvasId = 'captchaCanvas') {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    _captchaValor = code;
+
+    const canvas = document.getElementById(canvasId);
+    const ctx    = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#f4f3f0';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < 600; i++) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(Math.random() * W, Math.random() * H, 1.5, 1.5);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * W, Math.random() * H);
+      ctx.bezierCurveTo(
+        Math.random() * W, Math.random() * H,
+        Math.random() * W, Math.random() * H,
+        Math.random() * W, Math.random() * H
+      );
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth   = 1.2;
+      ctx.stroke();
+    }
+
+    const colores = ['#3C3489', '#0F6E56', '#993C1D', '#185FA5'];
+    const charW   = W / (code.length + 1);
+
+    code.split('').forEach((ch, i) => {
+      const x      = charW * (i + 0.8) + (Math.random() * 6 - 3);
+      const y      = H / 2 + (Math.random() * 10 - 5);
+      const angulo = (Math.random() - 0.5) * 0.45;
+      const size   = 24 + Math.floor(Math.random() * 6);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angulo);
+      ctx.font         = `${Math.random() > 0.5 ? '700' : '500'} ${size}px monospace`;
+      ctx.fillStyle    = colores[i % colores.length];
+      ctx.textBaseline = 'middle';
+      ctx.textAlign    = 'center';
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+
+    document.getElementById('captchaInput').value = '';
+  }
+
+  function validarCaptcha(inputId) {
+    if (_bloqueado) return false;
+
+    const val      = document.getElementById(inputId).value.trim().toUpperCase();
+    const correcto = val === _captchaValor;
+
+    if (!correcto) {
+      _intentosCaptcha++;
+      if (_intentosCaptcha >= _MAX_INTENTOS) {
+        bloquearFormulario();
+      } else {
+        mostrarError(
+          document.getElementById('campoCaptcha'),
+          `El código no coincide. Intento ${_intentosCaptcha} de ${_MAX_INTENTOS}.`
+        );
+        actualizarContador();
+        generarCaptchaCanvas();
+      }
+    } else {
+      _intentosCaptcha = 0;
+      ocultarContador();
+    }
+
+    return correcto;
+  }
+
+  // ── Contador visual ───────────────────────────────────────────
+  function actualizarContador() {
+    const el = document.getElementById('contadorIntentos');
+    el.style.display = 'block';
+    el.textContent   = `Intentos: ${_intentosCaptcha} / ${_MAX_INTENTOS}`;
+    el.style.color   = _intentosCaptcha >= _MAX_INTENTOS - 1 ? '#cc0000' : '#888';
+  }
+
+  function ocultarContador() {
+    const el = document.getElementById('contadorIntentos');
+    el.style.display = 'none';
+    el.textContent   = '';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // 4.2.8 BLOQUEO
+  // ══════════════════════════════════════════════════════════════
+  function bloquearFormulario() {
+    _bloqueado = true;
+
+    document.getElementById('formLogin')
+      .querySelectorAll('input, button')
+      .forEach(el => el.disabled = true);
+
+    const canvas = document.getElementById('captchaCanvas');
+    const ctx    = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle    = '#cc0000';
+    ctx.font         = 'bold 14px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔒 BLOQUEADO', canvas.width / 2, canvas.height / 2);
+
+    mostrarAlerta(
+      document.getElementById('loginAlert'),
+      `⚠️ Has alcanzado el límite de ${_MAX_INTENTOS} intentos fallidos. Espera 60 segundos.`,
+      'error'
+    );
+
+    let segundos     = 60;
+    const elContador = document.getElementById('contadorIntentos');
+    elContador.style.display = 'block';
+    elContador.style.color   = '#cc0000';
+    elContador.textContent   = `Formulario bloqueado. Podrás intentarlo en ${segundos}s.`;
+
+    if (_timerBloqueo) clearInterval(_timerBloqueo);
+
+    _timerBloqueo = setInterval(() => {
+      segundos--;
+      elContador.textContent = `Formulario bloqueado. Podrás intentarlo en ${segundos}s.`;
+      if (segundos <= 0) {
+        clearInterval(_timerBloqueo);
+        desbloquearFormulario();
+      }
+    }, 1000);
+  }
+
+  function desbloquearFormulario() {
+    _bloqueado       = false;
+    _intentosCaptcha = 0;
+
+    document.getElementById('formLogin')
+      .querySelectorAll('input, button')
+      .forEach(el => el.disabled = false);
+
+    const alerta = document.getElementById('loginAlert');
+    alerta.textContent = '';
+    alerta.className   = 'alert';
+
+    ocultarContador();
+    limpiarError(document.getElementById('campoCaptcha'));
+    generarCaptchaCanvas();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // 4.2.6 VERIFICACIÓN DE CORREO
+  // ══════════════════════════════════════════════════════════════
+  function verificarFormatoCorreo(valor) {
+    const campo = document.getElementById('campoCorreo');
+
+    if (!valor) {
+      mostrarError(campo, 'El correo electrónico es obligatorio.');
+      return false;
+    }
+    if (!REGEX_CORREO.test(valor)) {
+      mostrarError(campo, 'Ingresa un correo electrónico válido (ej: usuario@dominio.com).');
+      return false;
+    }
+
+    const dominiosBloqueados = ['mailinator.com', 'tempmail.com', 'guerrillamail.com', 'trashmail.com', 'yopmail.com'];
+    const dominio = valor.split('@')[1]?.toLowerCase();
+    if (dominiosBloqueados.includes(dominio)) {
+      mostrarError(campo, 'No se permiten correos temporales o desechables.');
+      return false;
+    }
+
+    limpiarError(campo);
+    return true;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // SUBMIT — handleLogin
+  // ══════════════════════════════════════════════════════════════
+  function handleLogin() {
+    if (_bloqueado) return;
+
+    const correo   = document.getElementById('correo');
+    const password = document.getElementById('password');
+    const alerta   = document.getElementById('loginAlert');
+    let valido     = true;
+
+    // 4.2.6 — Correo
+    if (!verificarFormatoCorreo(correo.value.trim())) valido = false;
+
+    // Contraseña
+    if (password.value.length < 8) {
+      mostrarError(document.getElementById('campoPassword'), 'Tu contraseña debe tener al menos 8 caracteres.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoPassword'));
+    }
+
+    // 4.2.7 — Captcha
+    if (!validarCaptcha('captchaInput')) {
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoCaptcha'));
+    }
+
+    if (!valido) {
+      if (!_bloqueado) mostrarAlerta(alerta, 'Revisa los campos marcados antes de continuar.', 'error');
+      return;
+    }
+
+    // ✅ JWT simulado — crear sesión
+    crearSesion(correo.value.trim());
+
+    mostrarAlerta(alerta, '✅ Credenciales correctas. Redirigiendo…', 'success');
+    setTimeout(() => { window.location.href = 'index.html'; }, 900);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // JWT SIMULADO
+  // ══════════════════════════════════════════════════════════════
+  function crearSesion(correo) {
+    const sesion = {
+      correo: correo,
+      expira: Date.now() + (8 * 60 * 60 * 1000)  // 8 horas
+    };
+    localStorage.setItem('jo_sesion', JSON.stringify(sesion));
+  }
+
+</script>
+
+</body>
+</html>

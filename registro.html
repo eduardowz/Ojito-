@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crear cuenta · Juárez Observa</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="auth">
+
+  <!-- ============ PANEL DE MARCA ============ -->
+  <section class="auth__showcase">
+    <div class="watch-grid" id="registroGrid" aria-hidden="true">
+      <div class="watch-grid__lines"></div>
+      <div class="watch-grid__glow"></div>
+    </div>
+
+    <div class="auth__showcase-content">
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <p class="auth__eyebrow" style="margin-top:40px;">Únete a la red ciudadana</p>
+      <h1 class="auth__headline">Tu colonia mejora <em>cuando alguien la observa.</em></h1>
+      <p class="auth__lede">
+        Crea tu cuenta para reportar baches, fugas, luminarias apagadas y más.
+        Recibirás un correo de verificación antes de poder iniciar sesión.
+      </p>
+    </div>
+
+    <div class="auth__stats">
+      <div>
+        <div class="auth__stat-value">13</div>
+        <div class="auth__stat-label">Categorías de reporte</div>
+      </div>
+      <div>
+        <div class="auth__stat-value">72 h</div>
+        <div class="auth__stat-label">Tiempo promedio de 1ª respuesta</div>
+      </div>
+      <div>
+        <div class="auth__stat-value">100%</div>
+        <div class="auth__stat-label">Cuentas verificadas por correo</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL DE FORMULARIO ============ -->
+  <section class="auth__panel">
+    <div class="auth__form-wrap">
+
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <h2 class="auth__title">Crea tu cuenta</h2>
+      <p class="auth__subtitle">Regístrate como ciudadano para empezar a reportar incidentes en tu colonia.</p>
+
+      <!-- ✅ FIX: sin clase alert--error fija -->
+      <div class="alert" id="registroAlert"></div>
+
+      <!-- ✅ FIX: sin action de PHP por ahora, se maneja todo en JS -->
+      <form id="formRegistro" novalidate>
+
+        <div class="field" id="campoNombre">
+          <label for="nombre">Nombre completo</label>
+          <input class="input" type="text" id="nombre" name="nombre"
+                 placeholder="Ej. María Fernanda Ríos"
+                 autocomplete="name" required minlength="3">
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoCorreo">
+          <label for="correo">Correo electrónico</label>
+          <input class="input" type="email" id="correo" name="correo"
+                 placeholder="tu@correo.com" autocomplete="email" required>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoTelefono">
+          <label for="telefono">Teléfono celular</label>
+          <input class="input" type="tel" id="telefono" name="telefono"
+                 placeholder="656 123 4567" autocomplete="tel"
+                 maxlength="12" required>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoPassword">
+          <label for="password">Contraseña</label>
+          <div class="input-group">
+            <input class="input" type="password" id="password" name="password"
+                   placeholder="Mínimo 8 caracteres"
+                   autocomplete="new-password" required minlength="8"
+                   oninput="evaluarFuerzaRegistro(this.value)">
+            <button type="button" class="input-group__action"
+                    data-toggle-password="password">MOSTRAR</button>
+          </div>
+          <!-- ✅ Barra de fuerza de contraseña igual que en recuperar.html -->
+          <div class="password-strength">
+            <div class="strength-bar">
+              <div class="strength-bar__fill" id="strengthFill"></div>
+            </div>
+            <span class="strength-label" id="strengthLabel"></span>
+          </div>
+          <span class="hint">Usa al menos 8 caracteres, combinando letras, números y un símbolo.</span>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoConfirmacion">
+          <label for="confirmacion">Confirmar contraseña</label>
+          <div class="input-group">
+            <input class="input" type="password" id="confirmacion" name="confirmacion"
+                   placeholder="Repite tu contraseña"
+                   autocomplete="new-password" required>
+            <button type="button" class="input-group__action"
+                    data-toggle-password="confirmacion">MOSTRAR</button>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
+        <!-- ✅ FIX: canvas igual que en login.html -->
+        <div class="field" id="campoCaptcha">
+          <label for="captchaInput">Verificación de seguridad</label>
+          <div class="captcha">
+            <canvas id="captchaCanvas" width="200" height="60"
+                    style="border-radius:6px; border:1px solid #ddd;"></canvas>
+            <button type="button" class="captcha__refresh" id="captchaRefresh"
+                    title="Generar nuevo código" aria-label="Generar nuevo código"
+                    onclick="generarCaptchaRegistro()">↻</button>
+            <input class="input" type="text" id="captchaInput" name="captcha"
+                   placeholder="Escribe el código" autocomplete="off"
+                   style="text-transform:uppercase; letter-spacing:2px;" required>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoTerminos">
+          <label class="checkbox-row" for="terminos">
+            <input type="checkbox" id="terminos" name="terminos" required>
+            Acepto el aviso de privacidad y los términos de uso de Juárez Observa
+          </label>
+          <span class="field-error"></span>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Crear cuenta</button>
+      </form>
+
+      <p class="auth__foot">
+        ¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+
+  // ══════════════════════════════════════════════════════════════
+  // REGEX TELÉFONO — ✅ FIX: definido aquí porque no está en app.js
+  // ══════════════════════════════════════════════════════════════
+  const REGEX_TELEFONO = /^\d{10}$/;
+
+  // Captcha propio de esta página
+  let _captchaRegistro = '';
+
+  // ══════════════════════════════════════════════════════════════
+  // INICIALIZACIÓN — ✅ FIX: todo dentro de DOMContentLoaded
+  // ══════════════════════════════════════════════════════════════
+  document.addEventListener('DOMContentLoaded', () => {
+
+    pintarRetícula('registroGrid', 16);
+    generarCaptchaRegistro();
+
+    // Formato automático del teléfono mientras escribe
+    document.getElementById('telefono').addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g, '').slice(0, 10);
+      if (val.length > 6)      val = val.slice(0,3) + ' ' + val.slice(3,6) + ' ' + val.slice(6);
+      else if (val.length > 3) val = val.slice(0,3) + ' ' + val.slice(3);
+      e.target.value = val;
+    });
+
+    // Submit
+    document.getElementById('formRegistro').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleRegistro();
+    });
+
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  // CAPTCHA — mismo estilo canvas que login.html
+  // ══════════════════════════════════════════════════════════════
+  function generarCaptchaRegistro(canvasId = 'captchaCanvas') {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    _captchaRegistro = code;
+
+    const canvas = document.getElementById(canvasId);
+    const ctx    = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#f4f3f0';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < 600; i++) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(Math.random() * W, Math.random() * H, 1.5, 1.5);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * W, Math.random() * H);
+      ctx.bezierCurveTo(
+        Math.random() * W, Math.random() * H,
+        Math.random() * W, Math.random() * H,
+        Math.random() * W, Math.random() * H
+      );
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth   = 1.2;
+      ctx.stroke();
+    }
+
+    const colores = ['#3C3489', '#0F6E56', '#993C1D', '#185FA5'];
+    const charW   = W / (code.length + 1);
+
+    code.split('').forEach((ch, i) => {
+      const x      = charW * (i + 0.8) + (Math.random() * 6 - 3);
+      const y      = H / 2 + (Math.random() * 10 - 5);
+      const angulo = (Math.random() - 0.5) * 0.45;
+      const size   = 24 + Math.floor(Math.random() * 6);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angulo);
+      ctx.font         = `${Math.random() > 0.5 ? '700' : '500'} ${size}px monospace`;
+      ctx.fillStyle    = colores[i % colores.length];
+      ctx.textBaseline = 'middle';
+      ctx.textAlign    = 'center';
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+
+    document.getElementById('captchaInput').value = '';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // BARRA DE FUERZA DE CONTRASEÑA
+  // ══════════════════════════════════════════════════════════════
+  function evaluarFuerzaRegistro(valor) {
+    const fill  = document.getElementById('strengthFill');
+    const label = document.getElementById('strengthLabel');
+
+    let puntos = 0;
+    if (valor.length >= 8)          puntos++;
+    if (/[A-Z]/.test(valor))        puntos++;
+    if (/[0-9]/.test(valor))        puntos++;
+    if (/[^A-Za-z0-9]/.test(valor)) puntos++;
+
+    const niveles = [
+      { pct: '0%',   color: '#eee',    texto: '' },
+      { pct: '25%',  color: '#e74c3c', texto: 'Muy débil' },
+      { pct: '50%',  color: '#e67e22', texto: 'Débil' },
+      { pct: '75%',  color: '#f1c40f', texto: 'Regular' },
+      { pct: '100%', color: '#1a7a3e', texto: 'Segura 🔒' },
+    ];
+
+    const nivel           = niveles[puntos];
+    fill.style.width      = nivel.pct;
+    fill.style.background = nivel.color;
+    label.textContent     = nivel.texto;
+    label.style.color     = nivel.color;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // VALIDACIÓN Y SUBMIT
+  // ══════════════════════════════════════════════════════════════
+  function handleRegistro() {
+    const alerta      = document.getElementById('registroAlert');
+    const nombre      = document.getElementById('nombre');
+    const correo      = document.getElementById('correo');
+    const telefono    = document.getElementById('telefono');
+    const password    = document.getElementById('password');
+    const confirmacion = document.getElementById('confirmacion');
+    const captchaInput = document.getElementById('captchaInput');
+    const terminos    = document.getElementById('terminos');
+    let valido        = true;
+
+    // ── Nombre ────────────────────────────────────────────────
+    if (nombre.value.trim().length < 3) {
+      mostrarError(document.getElementById('campoNombre'), 'Ingresa tu nombre completo (mínimo 3 caracteres).');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoNombre'));
+    }
+
+    // ── Correo ────────────────────────────────────────────────
+    if (!REGEX_CORREO.test(correo.value.trim())) {
+      mostrarError(document.getElementById('campoCorreo'), 'Ingresa un correo electrónico válido.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoCorreo'));
+    }
+
+    // ── Teléfono ──────────────────────────────────────────────
+    const telLimpio = telefono.value.replace(/\D/g, '');
+    if (!REGEX_TELEFONO.test(telLimpio)) {
+      mostrarError(document.getElementById('campoTelefono'), 'Ingresa un número a 10 dígitos.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoTelefono'));
+    }
+
+    // ── Contraseña ────────────────────────────────────────────
+    if (password.value.length < 8) {
+      mostrarError(document.getElementById('campoPassword'), 'Tu contraseña debe tener al menos 8 caracteres.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoPassword'));
+    }
+
+    // ── Confirmación ──────────────────────────────────────────
+    if (confirmacion.value !== password.value || confirmacion.value.length === 0) {
+      mostrarError(document.getElementById('campoConfirmacion'), 'Las contraseñas no coinciden.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoConfirmacion'));
+    }
+
+    // ── Captcha ───────────────────────────────────────────────
+    if (captchaInput.value.trim().toUpperCase() !== _captchaRegistro) {
+      mostrarError(document.getElementById('campoCaptcha'), 'El código no coincide. Intenta de nuevo.');
+      generarCaptchaRegistro();
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoCaptcha'));
+    }
+
+    // ── Términos ──────────────────────────────────────────────
+    if (!terminos.checked) {
+      mostrarError(document.getElementById('campoTerminos'), 'Debes aceptar los términos para continuar.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoTerminos'));
+    }
+
+    if (!valido) {
+      mostrarAlerta(alerta, 'Revisa los campos marcados antes de continuar.', 'error');
+      return;
+    }
+
+    // ✅ Todo correcto — simular registro exitoso
+    const btn = document.querySelector('#formRegistro .btn--primary');
+    btn.disabled    = true;
+    btn.textContent = 'Creando cuenta…';
+
+    setTimeout(() => {
+      mostrarAlerta(
+        alerta,
+        '✅ Cuenta creada. Revisa tu correo para verificarla antes de iniciar sesión.',
+        'success'
+      );
+      document.getElementById('formRegistro').reset();
+      evaluarFuerzaRegistro('');
+      generarCaptchaRegistro();
+      btn.disabled    = false;
+      btn.textContent = 'Crear cuenta';
+    }, 1200);
+  }
+
+</script>
+
+</body>
+</html>
