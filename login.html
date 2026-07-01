@@ -45,7 +45,9 @@
       </span>
 
       <h2 class="auth__title">Inicia sesión</h2>
-      <p class="auth__subtitle">Accede a tu cuenta para reportar y dar seguimiento a incidentes en tu colonia.</p>
+      <p class="auth__subtitle">
+        Un solo acceso para ciudadanos e instituciones. Tu cuenta se reconoce automáticamente.
+      </p>
 
       <div class="alert" id="loginAlert"></div>
 
@@ -102,6 +104,8 @@
 
       <p class="auth__foot">
         ¿Aún no tienes cuenta? <a href="registro.html">Regístrate como ciudadano</a>
+        &nbsp;·&nbsp;
+        <a href="institucion_registro.html">Registra tu institución</a>
       </p>
     </div>
   </section>
@@ -109,6 +113,7 @@
 </div>
 
 <script src="assets/js/app.js"></script>
+<script src="assets/js/institucion.js"></script>
 <script>
   let _bloqueado       = false;
   let _intentosCaptcha = 0;
@@ -126,6 +131,9 @@
     });
   });
 
+  // ══════════════════════════════════════════════════════════════
+  // CAPTCHA (sin cambios respecto a tu versión original)
+  // ══════════════════════════════════════════════════════════════
   function generarCaptchaCanvas(canvasId = 'captchaCanvas') {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
@@ -224,7 +232,14 @@
     generarCaptchaCanvas();
   }
 
-  function handleLogin() {
+  // ══════════════════════════════════════════════════════════════
+  // VALIDACIÓN Y SUBMIT
+  // ✅ El rol (ciudadano / institución) se detecta automáticamente
+  // según en qué almacén coincidan el correo + hash de contraseña.
+  // El usuario NO elige su rol — evita que alguien intente entrar
+  // como institución sin serlo realmente.
+  // ══════════════════════════════════════════════════════════════
+  async function handleLogin() {
     if (_bloqueado) return;
     const correo   = document.getElementById('correo');
     const password = document.getElementById('password');
@@ -252,14 +267,36 @@
       return;
     }
 
-    // ✅ Guarda sesión con nombre extraído del correo como fallback
-    const nombreDeCorreo = correo.value.trim().split('@')[0].replace(/[._]/g,' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
-    crearSesion(correo.value.trim(), nombreDeCorreo);
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled    = true;
+    btn.textContent = 'Verificando…';
 
-    mostrarAlerta(alerta,'✅ Credenciales correctas. Redirigiendo…','success');
-    // ✅ Redirige a ciudadano.html, no a index.html
-    setTimeout(() => { window.location.href = 'ciudadano.html'; }, 900);
+    const correoVal    = correo.value.trim();
+    const passwordVal   = password.value;
+
+    // ── 1) ¿Coincide como ciudadano? ───────────────────────────
+    const usuario = await verificarCredenciales(correoVal, passwordVal);
+    if (usuario) {
+      crearSesion(usuario.correo, usuario.nombre);
+      mostrarAlerta(alerta, '✅ Credenciales correctas. Redirigiendo…', 'success');
+      setTimeout(() => { window.location.href = 'ciudadano.html'; }, 900);
+      return;
+    }
+
+    // ── 2) ¿Coincide como institución? ─────────────────────────
+    const institucion = await verificarCredencialesInstitucion(correoVal, passwordVal);
+    if (institucion) {
+      crearSesionInstitucion(institucion);
+      mostrarAlerta(alerta, `✅ Acceso institucional (${institucion.tipo}). Redirigiendo…`, 'success');
+      setTimeout(() => { window.location.href = 'institucion_dashboard.html'; }, 900);
+      return;
+    }
+
+    // ── 3) No coincide en ningún almacén ───────────────────────
+    mostrarAlerta(alerta, 'Correo o contraseña incorrectos.', 'error');
+    generarCaptchaCanvas();
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión';
   }
 </script>
 </body>

@@ -278,18 +278,18 @@
   }
 
   // ══════════════════════════════════════════════════════════════
-  // VALIDACIÓN Y SUBMIT
+  // VALIDACIÓN Y SUBMIT — ✅ ACTUALIZADO: hash SHA-256 vía app.js
   // ══════════════════════════════════════════════════════════════
-  function handleRegistro() {
-    const alerta      = document.getElementById('registroAlert');
-    const nombre      = document.getElementById('nombre');
-    const correo      = document.getElementById('correo');
-    const telefono    = document.getElementById('telefono');
-    const password    = document.getElementById('password');
+  async function handleRegistro() {
+    const alerta       = document.getElementById('registroAlert');
+    const nombre       = document.getElementById('nombre');
+    const correo       = document.getElementById('correo');
+    const telefono     = document.getElementById('telefono');
+    const password     = document.getElementById('password');
     const confirmacion = document.getElementById('confirmacion');
     const captchaInput = document.getElementById('captchaInput');
-    const terminos    = document.getElementById('terminos');
-    let valido        = true;
+    const terminos     = document.getElementById('terminos');
+    let valido         = true;
 
     // ── Nombre ────────────────────────────────────────────────
     if (nombre.value.trim().length < 3) {
@@ -354,23 +354,39 @@
       return;
     }
 
-    // ✅ Todo correcto — simular registro exitoso
+    // ✅ Todo correcto — hashear contraseña (SHA-256) y guardar usuario
     const btn = document.querySelector('#formRegistro .btn--primary');
     btn.disabled    = true;
     btn.textContent = 'Creando cuenta…';
 
-    setTimeout(() => {
-      mostrarAlerta(
-        alerta,
-        '✅ Cuenta creada. Revisa tu correo para verificarla antes de iniciar sesión.',
-        'success'
-      );
-      document.getElementById('formRegistro').reset();
-      evaluarFuerzaRegistro('');
-      generarCaptchaRegistro();
+    try {
+      // registrarUsuario() y hashPassword() viven en assets/js/app.js
+      await registrarUsuario({
+        nombre: nombre.value.trim(),
+        correo: correo.value.trim(),
+        telefono: telLimpio,
+        password: password.value
+      });
+
+      setTimeout(() => {
+        mostrarAlerta(
+          alerta,
+          '✅ Cuenta creada. Revisa tu correo para verificarla antes de iniciar sesión.',
+          'success'
+        );
+        document.getElementById('formRegistro').reset();
+        evaluarFuerzaRegistro('');
+        generarCaptchaRegistro();
+        btn.disabled    = false;
+        btn.textContent = 'Crear cuenta';
+      }, 1200);
+
+    } catch (err) {
+      // Ej. "Ya existe una cuenta registrada con ese correo."
+      mostrarAlerta(alerta, err.message, 'error');
       btn.disabled    = false;
       btn.textContent = 'Crear cuenta';
-    }, 1200);
+    }
   }
 
 </script>

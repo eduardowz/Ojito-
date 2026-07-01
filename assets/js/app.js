@@ -23,9 +23,9 @@ function mostrarAlerta(el, mensaje, tipo = 'error') {
   el.className = `alert alert--${tipo}`;
 }
 
-// ── Sesión ────────────────────────────────────────────────────
+// ── Sesión (ciudadano) ──────────────────────────────────────
 function crearSesion(correo, nombre = 'Usuario') {
-  const sesion = { correo, nombre, expira: Date.now() + (8 * 60 * 60 * 1000) };
+  const sesion = { correo, nombre, rol: 'ciudadano', expira: Date.now() + (8 * 60 * 60 * 1000) };
   localStorage.setItem('jo_sesion', JSON.stringify(sesion));
 }
 
@@ -84,3 +84,63 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// ══════════════════════════════════════════════════════════════
+// CIFRADO DE CONTRASEÑA — SHA-256 vía Web Crypto API
+// ══════════════════════════════════════════════════════════════
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// ALMACÉN DE USUARIOS (ciudadanos) — simulado con localStorage
+// ⚠️ Solo para pruebas/demo. En producción esto vive en un
+// backend real con base de datos, nunca en el navegador.
+// ══════════════════════════════════════════════════════════════
+function _obtenerUsuarios() {
+  try {
+    return JSON.parse(localStorage.getItem('jo_usuarios')) || {};
+  } catch { return {}; }
+}
+
+function _guardarUsuarios(usuarios) {
+  localStorage.setItem('jo_usuarios', JSON.stringify(usuarios));
+}
+
+async function registrarUsuario({ nombre, correo, telefono, password }) {
+  const usuarios = _obtenerUsuarios();
+  const correoKey = correo.trim().toLowerCase();
+
+  if (usuarios[correoKey]) {
+    throw new Error('Ya existe una cuenta registrada con ese correo.');
+  }
+
+  // ✅ Evita cuentas cruzadas: un correo ya registrado como institución
+  // no puede volver a registrarse como ciudadano.
+  const instituciones = JSON.parse(localStorage.getItem('jo_instituciones') || '{}');
+  if (instituciones[correoKey]) {
+    throw new Error('Ese correo ya está registrado como cuenta institucional.');
+  }
+
+  const passwordHash = await hashPassword(password);
+  usuarios[correoKey] = { nombre, correo: correoKey, telefono, passwordHash };
+  _guardarUsuarios(usuarios);
+  return usuarios[correoKey];
+}
+
+async function verificarCredenciales(correo, password) {
+  const usuarios = _obtenerUsuarios();
+  const correoKey = correo.trim().toLowerCase();
+  const usuario = usuarios[correoKey];
+
+  if (!usuario) return null;
+
+  const passwordHash = await hashPassword(password);
+  if (passwordHash !== usuario.passwordHash) return null;
+
+  return usuario;
+}
