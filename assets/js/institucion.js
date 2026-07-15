@@ -34,9 +34,20 @@ function _guardarInstituciones(instituciones) {
 }
 
 async function registrarInstitucion({ nombreInstitucion, tipo, matricula, correo, password }) {
-  const instituciones = _obtenerInstituciones();
-  const correoKey = correo.trim().toLowerCase();
-  const matriculaLimpia = (matricula || '').trim();
+  const instituciones      = _obtenerInstituciones();
+  const correoKey          = correo.trim().toLowerCase();
+  const nombreInstLimpio   = (nombreInstitucion || '').trim();
+  const tipoLimpio         = (tipo || '').trim();
+  const matriculaLimpia    = (matricula || '').trim();
+  // ✅ FIX: clave normalizada (mayúsculas/espacios) solo para comparar,
+  // sin alterar cómo se guarda la matrícula original.
+  const matriculaComparar  = matriculaLimpia.toLowerCase();
+
+  // ✅ FIX: el nombre de la institución ahora también se valida aquí,
+  // no solo se confía en el "required" del HTML.
+  if (nombreInstLimpio.length < 3) {
+    throw new Error('Ingresa el nombre de la institución (mínimo 3 caracteres).');
+  }
 
   if (instituciones[correoKey]) {
     throw new Error('Ya existe una cuenta institucional con ese correo.');
@@ -49,17 +60,20 @@ async function registrarInstitucion({ nombreInstitucion, tipo, matricula, correo
     throw new Error('Ese correo ya está registrado como cuenta ciudadana.');
   }
 
-  if (!TIPOS_INSTITUCION.includes(tipo)) {
+  // ✅ FIX: se compara contra la versión ya recortada (tipoLimpio), para
+  // que un espacio accidental al inicio/final del <select> no rompa
+  // la validación aunque el valor "se vea" correcto.
+  if (!TIPOS_INSTITUCION.includes(tipoLimpio)) {
     throw new Error('Selecciona un tipo de institución válido.');
   }
   if (matriculaLimpia.length < 3) {
     throw new Error('Ingresa una matrícula o número de empleado válido.');
   }
 
-  // ✅ La matrícula debe ser única: evita que un mismo empleado
-  // registre varias cuentas dentro de la misma institución.
+  // ✅ FIX: comparación de matrícula insensible a mayúsculas/minúsculas,
+  // para que "EMP-2451" y "emp-2451" cuenten como la misma matrícula.
   const yaExiste = Object.values(instituciones).some(
-    i => i.matricula === matriculaLimpia
+    i => (i.matricula || '').trim().toLowerCase() === matriculaComparar
   );
   if (yaExiste) {
     throw new Error('Ya existe una cuenta registrada con esa matrícula.');
@@ -67,8 +81,8 @@ async function registrarInstitucion({ nombreInstitucion, tipo, matricula, correo
 
   const passwordHash = await hashPassword(password);
   instituciones[correoKey] = {
-    nombreInstitucion,
-    tipo,
+    nombreInstitucion: nombreInstLimpio,
+    tipo: tipoLimpio,
     matricula: matriculaLimpia,
     correo: correoKey,
     passwordHash
