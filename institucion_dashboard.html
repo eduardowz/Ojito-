@@ -6,12 +6,15 @@
 <title>Panel institucional · Juárez Observa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="assets/css/styles.css">
 <style>
   /* ══════════════════════════════════════════════════════════
      TOKENS · panel institucional
-     Reutiliza la retícula del login como mapa funcional y el
+     Reutiliza la retícula del login como fondo decorativo y el
      monospace de los códigos captcha como fuente de datos/UI.
+     El mapa de reportes ahora usa Leaflet, igual que en el rol
+     de ciudadanos, en vez de una retícula simulada.
      ══════════════════════════════════════════════════════════ */
   :root{
     --jo-cream:#F4F3F0;
@@ -177,16 +180,23 @@
   .btn--sm{padding:6px 12px;font-size:12.5px;}
   .btn--forest{background:var(--jo-forest);border-color:var(--jo-forest);}
 
-  /* ── mapa (retícula reutilizada) ─────────────────────────── */
+  /* ── mapa (Leaflet real, igual que en el rol de ciudadanos) ─ */
   .mapa-frame{
     position:relative;height:480px;border-radius:14px;overflow:hidden;
-    background:var(--jo-indigo);
+    border:1px solid var(--jo-line);
+    background:#e7e5df; /* fallback mientras carga el tile layer */
   }
-  .mapa-frame__grid{position:absolute;inset:0;}
-  .mapa-pin{
-    position:absolute;width:13px;height:13px;border-radius:50% 50% 50% 0;
-    transform:translate(-50%,-100%) rotate(-45deg);
-    border:2px solid #fff;cursor:pointer;
+  .mapa-frame .leaflet-container{
+    width:100%;height:100%;font-family:var(--font-body);
+  }
+  /* popups de Leaflet con la tipografía/paleta del panel */
+  .mapa-popup{font-family:var(--font-body);font-size:13px;min-width:150px;}
+  .mapa-popup__cat{font-weight:600;font-size:13.5px;margin-bottom:2px;}
+  .mapa-popup__dir{color:#5b5870;font-size:12px;margin-bottom:6px;}
+  .mapa-popup__btn{
+    font-family:var(--font-body);font-weight:600;font-size:12px;
+    padding:5px 10px;border-radius:6px;border:1px solid var(--jo-ink);
+    background:var(--jo-ink);color:#fff;cursor:pointer;
   }
   .mapa-legend{display:flex;gap:18px;margin-top:14px;font-size:12.5px;color:#5b5870;}
   .mapa-legend span{display:inline-flex;align-items:center;gap:6px;}
@@ -325,12 +335,11 @@
         <div>
           <div class="main__eyebrow">Ubicación de incidencias</div>
           <h1 class="main__title">Mapa de reportes</h1>
-          <p class="main__sub">Cada punto representa un reporte asignado a tu institución, ubicado sobre la retícula de la ciudad.</p>
+          <p class="main__sub">Cada punto representa un reporte asignado a tu institución, sobre el mismo mapa que usan los ciudadanos.</p>
         </div>
       </div>
       <div class="mapa-frame">
-        <div class="mapa-frame__grid" id="mapaGrid"><div class="watch-grid__lines"></div></div>
-        <div id="mapaPins"></div>
+        <div id="institucionMap" style="width:100%;height:100%;"></div>
       </div>
       <div class="mapa-legend">
         <span><i style="background:var(--jo-terracotta)"></i> Pendiente</span>
@@ -431,6 +440,7 @@
   <button class="btn btn--forest btn--sm" id="detailResueltoBtn" style="margin-top:22px;width:100%;">Marcar como resuelto</button>
 </aside>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/institucion.js"></script>
 <script>
@@ -442,14 +452,28 @@
   let filtroEstado = 'Todos';
   let reporteActivoId = null;
 
+  // Estado del mapa Leaflet (igual patrón que en el rol de ciudadanos)
+  let institucionMap       = null;
+  let institucionMarkersLG = null;
+
   const COLOR_ESTADO = {
     'Pendiente':   'var(--jo-terracotta)',
     'En proceso':  'var(--jo-steel)',
     'Resuelto':    'var(--jo-forest)'
   };
+  // Colores en hex para usarlos directamente en los círculos de Leaflet
+  const COLOR_ESTADO_HEX = {
+    'Pendiente':   '#993C1D',
+    'En proceso':  '#185FA5',
+    'Resuelto':    '#0F6E56'
+  };
   const BADGE_CLASE = {
     'Pendiente':'badge--pendiente','En proceso':'badge--proceso','Resuelto':'badge--resuelto'
   };
+
+  // Centro por defecto: Ciudad Juárez, Chihuahua
+  const JUAREZ_CENTER = [31.6904, -106.4245];
+  const JUAREZ_ZOOM   = 12;
 
   document.addEventListener('DOMContentLoaded', () => {
     SESION = requireSesionInstitucion('institucion_login.html');
@@ -462,7 +486,6 @@
     document.getElementById('bandejaTitulo').textContent = TIPO;
 
     pintarRetícula('sidebarGrid', 10);
-    pintarRetícula('mapaGrid', 18);
 
     initNav();
     initTabs();
@@ -566,31 +589,62 @@
   }
 
   // ══════════════════════════════════════════════════════════
-  // MAPA
+  // MAPA — Leaflet real, igual mecánica que el rol de ciudadanos
   // ══════════════════════════════════════════════════════════
-  function renderMapa(){
-    const reportes = obtenerReportesPorInstitucion(TIPO);
-    const cont = document.getElementById('mapaPins');
-    cont.innerHTML = '';
-    if (reportes.length === 0) return;
+  function asegurarMapaInstitucion(){
+    if (institucionMap) return;
+    institucionMap = L.map('institucionMap', {
+      center: JUAREZ_CENTER,
+      zoom: JUAREZ_ZOOM,
+      scrollWheelZoom: true
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(institucionMap);
+    institucionMarkersLG = L.layerGroup().addTo(institucionMap);
+  }
 
-    const lats = reportes.map(r => r.lat), lngs = reportes.map(r => r.lng);
-    const pad = 0.01;
-    const minLat = Math.min(...lats) - pad, maxLat = Math.max(...lats) + pad;
-    const minLng = Math.min(...lngs) - pad, maxLng = Math.max(...lngs) + pad;
+  function renderMapa(){
+    asegurarMapaInstitucion();
+
+    const reportes = obtenerReportesPorInstitucion(TIPO);
+    institucionMarkersLG.clearLayers();
 
     reportes.forEach(r => {
-      const x = ((r.lng - minLng) / (maxLng - minLng)) * 100;
-      const y = 100 - ((r.lat - minLat) / (maxLat - minLat)) * 100;
-      const pin = document.createElement('div');
-      pin.className = 'mapa-pin';
-      pin.style.left = x + '%';
-      pin.style.top  = y + '%';
-      pin.style.background = COLOR_ESTADO[r.estado];
-      pin.title = `${r.categoria} · ${r.estado}`;
-      pin.addEventListener('click', () => abrirDetalle(r.id));
-      cont.appendChild(pin);
+      if (typeof r.lat !== 'number' || typeof r.lng !== 'number') return;
+      const color = COLOR_ESTADO_HEX[r.estado] || '#1F1D2B';
+      const marker = L.circleMarker([r.lat, r.lng], {
+        radius: 8,
+        color: '#fff',
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.95
+      });
+      marker.bindPopup(`
+        <div class="mapa-popup">
+          <div class="mapa-popup__cat">${r.categoria}</div>
+          <div class="mapa-popup__dir">${r.direccion || 'Sin dirección registrada'}</div>
+          <button class="mapa-popup__btn" data-id="${r.id}">Ver detalle</button>
+        </div>
+      `);
+      marker.on('popupopen', (e) => {
+        const btn = e.popup.getElement().querySelector('.mapa-popup__btn');
+        if (btn) btn.addEventListener('click', () => abrirDetalle(btn.dataset.id));
+      });
+      marker.addTo(institucionMarkersLG);
     });
+
+    if (reportes.length > 0){
+      const bounds = L.latLngBounds(reportes.filter(r => typeof r.lat === 'number' && typeof r.lng === 'number').map(r => [r.lat, r.lng]));
+      if (bounds.isValid()) institucionMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+    } else {
+      institucionMap.setView(JUAREZ_CENTER, JUAREZ_ZOOM);
+    }
+
+    // El contenedor puede haber estado oculto (display:none) al inicializar el mapa;
+    // hay que forzar un recalculo de tamaño al mostrarlo.
+    setTimeout(() => institucionMap.invalidateSize(), 0);
   }
 
   // ══════════════════════════════════════════════════════════
