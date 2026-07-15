@@ -476,7 +476,7 @@
   const JUAREZ_ZOOM   = 12;
 
   document.addEventListener('DOMContentLoaded', () => {
-    SESION = requireSesionInstitucion('institucion_login.html');
+    SESION = requireSesionInstitucion('login.html');
     if (!SESION) return;
     TIPO = SESION.tipo;
 
@@ -491,7 +491,7 @@
     initTabs();
     initDetailPanel();
 
-    document.getElementById('btnCerrarSesion').addEventListener('click', () => cerrarSesionInstitucion('institucion_login.html'));
+    document.getElementById('btnCerrarSesion').addEventListener('click', () => cerrarSesionInstitucion('login.html'));
 
     renderTodo();
   });
