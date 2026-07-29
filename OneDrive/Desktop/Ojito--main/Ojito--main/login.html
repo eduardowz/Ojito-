@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión · Juárez Observa</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="auth">
+
+  <!-- ============ PANEL DE MARCA ============ -->
+  <section class="auth__showcase">
+    <div class="watch-grid" id="loginGrid" aria-hidden="true">
+      <div class="watch-grid__lines"></div>
+      <div class="watch-grid__glow"></div>
+    </div>
+    <div class="auth__showcase-content">
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+      <p class="auth__eyebrow" style="margin-top:40px;">Plataforma ciudadana de reportes urbanos</p>
+      <h1 class="auth__headline">Cada bache, cada foco apagado, <em>cada reporte cuenta.</em></h1>
+      <p class="auth__lede">
+        Inicia sesión para dar seguimiento a tus reportes, ver el estado de tu colonia
+        y ayudar a que Ciudad Juárez responda más rápido.
+      </p>
+    </div>
+    <div class="auth__stats">
+      <div><div class="auth__stat-value">12,480</div><div class="auth__stat-label">Reportes recibidos</div></div>
+      <div><div class="auth__stat-value">8,962</div><div class="auth__stat-label">Resueltos</div></div>
+      <div><div class="auth__stat-value">9</div><div class="auth__stat-label">Dependencias conectadas</div></div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL DE FORMULARIO ============ -->
+  <section class="auth__panel">
+    <div class="auth__form-wrap">
+
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <h2 class="auth__title">Inicia sesión</h2>
+      <p class="auth__subtitle">
+        Un solo acceso para ciudadanos e instituciones. Tu cuenta se reconoce automáticamente.
+      </p>
+
+      <!-- ✅ NUEVO: aviso visible cuando la plataforma está en mantenimiento.
+           Se muestra/oculta desde JS según joAdmin_parametros.mantenimiento -->
+      <div class="alert alert--error" id="mantenimientoAviso" style="display:none;">
+        🚧 La plataforma está en mantenimiento en este momento. Solo el acceso de administrador
+        está disponible. Intenta de nuevo más tarde.
+      </div>
+
+      <div class="alert" id="loginAlert"></div>
+
+      <form id="formLogin" novalidate>
+
+        <div class="field" id="campoCorreo">
+          <label for="correo">Correo electrónico</label>
+          <input class="input" type="email" id="correo" name="correo"
+                 placeholder="tu@correo.com" autocomplete="email" required>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoPassword">
+          <label for="password">Contraseña</label>
+          <div class="input-group">
+            <input class="input" type="password" id="password" name="password"
+                   placeholder="••••••••" autocomplete="current-password" required minlength="8">
+            <button type="button" class="input-group__action" data-toggle-password="password">MOSTRAR</button>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoCaptcha">
+          <label for="captchaInput">Verificación de seguridad</label>
+          <div class="captcha">
+            <canvas id="captchaCanvas" width="200" height="60"
+                    style="border-radius:6px; border:1px solid #ddd;"></canvas>
+            <button type="button" class="captcha__refresh" id="captchaRefresh"
+                    title="Generar nuevo código" aria-label="Generar nuevo código"
+                    onclick="generarCaptchaCanvas()">↻</button>
+            <input class="input" type="text" id="captchaInput" name="captcha"
+                   placeholder="Escribe el código" autocomplete="off"
+                   style="text-transform:uppercase; letter-spacing:2px;" required>
+          </div>
+          <span class="field-error"></span>
+          <span id="contadorIntentos" style="font-size:12px;color:#666;margin-top:4px;display:none;"></span>
+        </div>
+
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <label class="checkbox-row" for="recordarme">
+            <input type="checkbox" id="recordarme" name="recordarme">
+            Recordarme
+          </label>
+          <a href="recuperar.html">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block" id="btnSubmit">
+          Iniciar sesión
+        </button>
+
+      </form>
+
+      <div class="auth__divider">o</div>
+
+      <p class="auth__foot">
+        ¿Aún no tienes cuenta? <a href="registro.html">Regístrate como ciudadano</a>
+        &nbsp;·&nbsp;
+        <a href="institucion_registro.html">Registra tu institución</a>
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/app.js"></script>
+<script src="assets/js/institucion.js"></script>
+<script src="assets/js/admin.js"></script>
+<script>
+  let _bloqueado       = false;
+  let _intentosCaptcha = 0;
+  const _MAX_INTENTOS  = 3;
+  let _timerBloqueo    = null;
+  let _captchaValor    = '';
+
+  // ══════════════════════════════════════════════════════════════
+  // ✅ NUEVO: MODO MANTENIMIENTO
+  // Lee el mismo parámetro que guarda el panel de administrador
+  // (assets: joAdmin_parametros -> { mantenimiento: true/false }).
+  // Cuando está activo, se avisa en pantalla y se bloquea el acceso
+  // de ciudadanos e instituciones en handleLogin(). El administrador
+  // NUNCA se bloquea, sin importar este valor.
+  // ══════════════════════════════════════════════════════════════
+  function _leerParametrosPlataforma() {
+    try {
+      return JSON.parse(localStorage.getItem('joAdmin_parametros')) || {};
+    } catch { return {}; }
+  }
+
+  function estaEnMantenimiento() {
+    return !!_leerParametrosPlataforma().mantenimiento;
+  }
+
+  function actualizarAvisoMantenimiento() {
+    const aviso = document.getElementById('mantenimientoAviso');
+    if (!aviso) return;
+    aviso.style.display = estaEnMantenimiento() ? 'block' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    pintarRetícula('loginGrid', 16);
+    generarCaptchaCanvas();
+    actualizarAvisoMantenimiento();
+
+    // ✅ Siembra la cuenta de administrador por defecto la primera vez
+    // que se abre la app (no hace nada si ya existe un administrador).
+    if (typeof sembrarAdminPorDefecto === 'function') sembrarAdminPorDefecto();
+
+    document.getElementById('formLogin').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleLogin();
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  // CAPTCHA (sin cambios respecto a tu versión original)
+  // ══════════════════════════════════════════════════════════════
+  function generarCaptchaCanvas(canvasId = 'captchaCanvas') {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    _captchaValor = code;
+
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#f4f3f0'; ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 600; i++) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(Math.random()*W, Math.random()*H, 1.5, 1.5);
+    }
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random()*W, Math.random()*H);
+      ctx.bezierCurveTo(Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H);
+      ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=1.2; ctx.stroke();
+    }
+    const colores = ['#3C3489','#0F6E56','#993C1D','#185FA5'];
+    const charW = W / (code.length + 1);
+    code.split('').forEach((ch, i) => {
+      const x=charW*(i+0.8)+(Math.random()*6-3), y=H/2+(Math.random()*10-5);
+      ctx.save(); ctx.translate(x,y); ctx.rotate((Math.random()-.5)*.45);
+      ctx.font=`${Math.random()>.5?'700':'500'} ${24+Math.floor(Math.random()*6)}px monospace`;
+      ctx.fillStyle=colores[i%colores.length]; ctx.textBaseline='middle'; ctx.textAlign='center';
+      ctx.fillText(ch,0,0); ctx.restore();
+    });
+    const inp = document.getElementById('captchaInput');
+    if (inp) inp.value = '';
+  }
+
+  function validarCaptcha() {
+    if (_bloqueado) return false;
+    const val = document.getElementById('captchaInput').value.trim().toUpperCase();
+    if (val !== _captchaValor) {
+      _intentosCaptcha++;
+      if (_intentosCaptcha >= _MAX_INTENTOS) {
+        bloquearFormulario();
+      } else {
+        mostrarError(document.getElementById('campoCaptcha'),
+          `El código no coincide. Intento ${_intentosCaptcha} de ${_MAX_INTENTOS}.`);
+        actualizarContador();
+        generarCaptchaCanvas();
+      }
+      return false;
+    }
+    _intentosCaptcha = 0;
+    ocultarContador();
+    return true;
+  }
+
+  function actualizarContador() {
+    const el = document.getElementById('contadorIntentos');
+    el.style.display='block';
+    el.textContent=`Intentos: ${_intentosCaptcha} / ${_MAX_INTENTOS}`;
+    el.style.color=_intentosCaptcha>=_MAX_INTENTOS-1?'#cc0000':'#888';
+  }
+  function ocultarContador() {
+    const el=document.getElementById('contadorIntentos');
+    el.style.display='none'; el.textContent='';
+  }
+
+  function bloquearFormulario() {
+    _bloqueado=true;
+    document.getElementById('formLogin').querySelectorAll('input,button').forEach(el=>el.disabled=true);
+    const canvas=document.getElementById('captchaCanvas'), ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#fff0f0'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#cc0000'; ctx.font='bold 14px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🔒 BLOQUEADO',canvas.width/2,canvas.height/2);
+    mostrarAlerta(document.getElementById('loginAlert'),
+      `⚠️ Límite de ${_MAX_INTENTOS} intentos. Espera 60 segundos.`,'error');
+    let s=60;
+    const el=document.getElementById('contadorIntentos');
+    el.style.display='block'; el.style.color='#cc0000';
+    el.textContent=`Bloqueado. Podrás intentarlo en ${s}s.`;
+    if (_timerBloqueo) clearInterval(_timerBloqueo);
+    _timerBloqueo=setInterval(()=>{
+      s--;
+      el.textContent=`Bloqueado. Podrás intentarlo en ${s}s.`;
+      if(s<=0){ clearInterval(_timerBloqueo); desbloquearFormulario(); }
+    },1000);
+  }
+
+  function desbloquearFormulario() {
+    _bloqueado=false; _intentosCaptcha=0;
+    document.getElementById('formLogin').querySelectorAll('input,button').forEach(el=>el.disabled=false);
+    const alerta=document.getElementById('loginAlert');
+    alerta.textContent=''; alerta.className='alert';
+    ocultarContador();
+    limpiarError(document.getElementById('campoCaptcha'));
+    generarCaptchaCanvas();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // VALIDACIÓN Y SUBMIT
+  // ✅ El rol (ciudadano / institución / administrador) se detecta
+  // automáticamente según en qué almacén coincidan el correo + hash
+  // de contraseña. El usuario NO elige su rol — evita que alguien
+  // intente entrar como institución o administrador sin serlo.
+  //
+  // ✅ NUEVO: si el modo mantenimiento está activo, solo se permite
+  // el login de administrador. Se comprueba admin primero (para
+  // permitirle entrar siempre) y, si no coincide, se corta el flujo
+  // antes de tocar los almacenes de ciudadano/institución.
+  // ══════════════════════════════════════════════════════════════
+  async function handleLogin() {
+    if (_bloqueado) return;
+    const correo   = document.getElementById('correo');
+    const password = document.getElementById('password');
+    const alerta   = document.getElementById('loginAlert');
+    let valido = true;
+
+    // Correo
+    if (!REGEX_CORREO.test(correo.value.trim())) {
+      mostrarError(document.getElementById('campoCorreo'),'Ingresa un correo válido.');
+      valido=false;
+    } else { limpiarError(document.getElementById('campoCorreo')); }
+
+    // Contraseña
+    if (password.value.length < 8) {
+      mostrarError(document.getElementById('campoPassword'),'Mínimo 8 caracteres.');
+      valido=false;
+    } else { limpiarError(document.getElementById('campoPassword')); }
+
+    // Captcha
+    if (!validarCaptcha()) { valido=false; }
+    else { limpiarError(document.getElementById('campoCaptcha')); }
+
+    if (!valido) {
+      if (!_bloqueado) mostrarAlerta(alerta,'Revisa los campos marcados.','error');
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled    = true;
+    btn.textContent = 'Verificando…';
+
+    const correoVal    = correo.value.trim();
+    const passwordVal   = password.value;
+
+    // ── 1) ¿Coincide como administrador general? ──────────────
+    // Se revisa primero porque es la cuenta más sensible: así no
+    // corre el riesgo de "perderse" contra un match accidental en
+    // otro almacén. Además, el administrador debe poder entrar
+    // SIEMPRE, incluso con el modo mantenimiento activado.
+    if (typeof verificarCredencialesAdmin === 'function') {
+      const admin = await verificarCredencialesAdmin(correoVal, passwordVal);
+      if (admin) {
+        crearSesionAdmin(admin.correo, admin.nombre);
+        mostrarAlerta(alerta, '✅ Acceso de administrador. Redirigiendo…', 'success');
+        setTimeout(() => { window.location.href = 'administrador_dashboard.html'; }, 900);
+        return;
+      }
+    }
+
+    // ── 1.5) ✅ NUEVO: si NO era administrador y el modo
+    // mantenimiento está activo, se bloquea aquí el acceso de
+    // ciudadanos e instituciones, sin llegar a revisar sus
+    // credenciales.
+    if (estaEnMantenimiento()) {
+      mostrarAlerta(alerta,
+        '🚧 La plataforma está en mantenimiento. Solo el administrador puede iniciar sesión en este momento.',
+        'error');
+      generarCaptchaCanvas();
+      btn.disabled = false;
+      btn.textContent = 'Iniciar sesión';
+      return;
+    }
+
+    // ── 2) ¿Coincide como ciudadano? ───────────────────────────
+    const usuario = await verificarCredenciales(correoVal, passwordVal);
+    if (usuario) {
+      crearSesion(usuario.correo, usuario.nombre);
+      mostrarAlerta(alerta, '✅ Credenciales correctas. Redirigiendo…', 'success');
+      setTimeout(() => { window.location.href = 'ciudadano.html'; }, 900);
+      return;
+    }
+
+    // ── 3) ¿Coincide como institución? ─────────────────────────
+    const institucion = await verificarCredencialesInstitucion(correoVal, passwordVal);
+    if (institucion) {
+      crearSesionInstitucion(institucion);
+      mostrarAlerta(alerta, `✅ Acceso institucional (${institucion.tipo}). Redirigiendo…`, 'success');
+      setTimeout(() => { window.location.href = 'institucion_dashboard.html'; }, 900);
+      return;
+    }
+
+    // ── 4) No coincide en ningún almacén ───────────────────────
+    mostrarAlerta(alerta, 'Correo o contraseña incorrectos.', 'error');
+    generarCaptchaCanvas();
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión';
+  }
+</script>
+</body>
+</html>

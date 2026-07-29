@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro institucional · Juárez Observa</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="auth">
+
+  <!-- ============ PANEL DE MARCA ============ -->
+  <section class="auth__showcase">
+    <div class="watch-grid" id="registroInstGrid" aria-hidden="true">
+      <div class="watch-grid__lines"></div>
+      <div class="watch-grid__glow"></div>
+    </div>
+
+    <div class="auth__showcase-content">
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <p class="auth__eyebrow" style="margin-top:40px;">Alta institucional</p>
+      <h1 class="auth__headline">Conecta a tu institución <em>con la ciudadanía.</em></h1>
+      <p class="auth__lede">
+        Registra una cuenta con el RFC oficial de tu institución para
+        acceder al panel de atención de reportes.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ PANEL DE FORMULARIO ============ -->
+  <section class="auth__panel">
+    <div class="auth__form-wrap">
+
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <h2 class="auth__title">Registro institucional</h2>
+      <p class="auth__subtitle">Solo instituciones registradas con RFC válido pueden crear una cuenta.</p>
+      <div class="alert" id="registroInstAlert"></div>
+
+      <form id="formRegistroInst" novalidate>
+
+        <div class="field" id="campoNombreInst">
+          <label for="nombreInst">Nombre de la institución</label>
+          <input class="input" type="text" id="nombreInst" name="nombreInst"
+                 placeholder="Ej. Policía Municipal de Juárez" required minlength="3">
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoTipoInst">
+          <label for="tipoInst">Tipo de institución</label>
+          <select class="input" id="tipoInst" name="tipoInst" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+          </select>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoRFC">
+          <label for="rfc">RFC de institución:</label>
+          <input class="input" type="text" id="rfc" name="rfc"
+                placeholder="Ej. JOC850101ABC" autocomplete="off" required minlength="3">
+          <span class="hint">Solo se acepta el rfc registrado ante la institución.</span>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoCorreoRegInst">
+          <label for="correoRegInst">Correo institucional</label>
+          <input class="input" type="email" id="correoRegInst" name="correoRegInst"
+                 placeholder="tu.nombre@institucion.gob.mx" autocomplete="email" required>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoPasswordRegInst">
+          <label for="passwordRegInst">Contraseña</label>
+          <div class="input-group">
+            <input class="input" type="password" id="passwordRegInst" name="passwordRegInst"
+                   placeholder="Mínimo 8 caracteres" autocomplete="new-password"
+                   required minlength="8" oninput="evaluarFuerzaRegInst(this.value)">
+            <button type="button" class="input-group__action"
+                    data-toggle-password="passwordRegInst">MOSTRAR</button>
+          </div>
+          <div class="password-strength">
+            <div class="strength-bar">
+              <div class="strength-bar__fill" id="strengthFillInst"></div>
+            </div>
+            <span class="strength-label" id="strengthLabelInst"></span>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoConfirmacionInst">
+          <label for="confirmacionInst">Confirmar contraseña</label>
+          <div class="input-group">
+            <input class="input" type="password" id="confirmacionInst" name="confirmacionInst"
+                   placeholder="Repite tu contraseña" autocomplete="new-password" required>
+            <button type="button" class="input-group__action"
+                    data-toggle-password="confirmacionInst">MOSTRAR</button>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoCaptchaRegInst">
+          <label for="captchaInputRegInst">Verificación de seguridad</label>
+          <div class="captcha">
+            <canvas id="captchaCanvasRegInst" width="200" height="60"
+                    style="border-radius:6px; border:1px solid #ddd;"></canvas>
+            <button type="button" class="captcha__refresh"
+                    title="Generar nuevo código" aria-label="Generar nuevo código"
+                    onclick="generarCaptchaRegInst()">↻</button>
+            <input class="input" type="text" id="captchaInputRegInst" name="captcha"
+                   placeholder="Escribe el código" autocomplete="off"
+                   style="text-transform:uppercase; letter-spacing:2px;" required>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Crear cuenta institucional</button>
+      </form>
+
+      <p class="auth__foot">
+        ¿Ya tienes cuenta institucional? <a href="login.html">Inicia sesión</a>
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/app.js"></script>
+<script src="assets/js/institucion.js"></script>
+<script>
+
+  let _captchaRegInst = '';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    pintarRetícula('registroInstGrid', 16);
+    generarCaptchaRegInst();
+    poblarSelectTipoInst();
+
+    document.getElementById('formRegistroInst').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleRegistroInstitucion();
+    });
+  });
+
+  function poblarSelectTipoInst() {
+    const select = document.getElementById('tipoInst');
+    TIPOS_INSTITUCION.forEach(tipo => {
+      const option = document.createElement('option');
+      option.value = tipo;
+      option.textContent = tipo;
+      select.appendChild(option);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // CAPTCHA
+  // ══════════════════════════════════════════════════════════════
+  function generarCaptchaRegInst() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    _captchaRegInst = code;
+
+    const canvas = document.getElementById('captchaCanvasRegInst');
+    const ctx    = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#f4f3f0';
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < 600; i++) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(Math.random() * W, Math.random() * H, 1.5, 1.5);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * W, Math.random() * H);
+      ctx.bezierCurveTo(
+        Math.random() * W, Math.random() * H,
+        Math.random() * W, Math.random() * H,
+        Math.random() * W, Math.random() * H
+      );
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth   = 1.2;
+      ctx.stroke();
+    }
+
+    const colores = ['#3C3489', '#0F6E56', '#993C1D', '#185FA5'];
+    const charW   = W / (code.length + 1);
+
+    code.split('').forEach((ch, i) => {
+      const x      = charW * (i + 0.8) + (Math.random() * 6 - 3);
+      const y      = H / 2 + (Math.random() * 10 - 5);
+      const angulo = (Math.random() - 0.5) * 0.45;
+      const size   = 24 + Math.floor(Math.random() * 6);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angulo);
+      ctx.font         = `${Math.random() > 0.5 ? '700' : '500'} ${size}px monospace`;
+      ctx.fillStyle    = colores[i % colores.length];
+      ctx.textBaseline = 'middle';
+      ctx.textAlign    = 'center';
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+
+    document.getElementById('captchaInputRegInst').value = '';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // BARRA DE FUERZA DE CONTRASEÑA
+  // ══════════════════════════════════════════════════════════════
+  function evaluarFuerzaRegInst(valor) {
+    const fill  = document.getElementById('strengthFillInst');
+    const label = document.getElementById('strengthLabelInst');
+
+    let puntos = 0;
+    if (valor.length >= 8)          puntos++;
+    if (/[A-Z]/.test(valor))        puntos++;
+    if (/[0-9]/.test(valor))        puntos++;
+    if (/[^A-Za-z0-9]/.test(valor)) puntos++;
+
+    const niveles = [
+      { pct: '0%',   color: '#eee',    texto: '' },
+      { pct: '25%',  color: '#e74c3c', texto: 'Muy débil' },
+      { pct: '50%',  color: '#e67e22', texto: 'Débil' },
+      { pct: '75%',  color: '#f1c40f', texto: 'Regular' },
+      { pct: '100%', color: '#1a7a3e', texto: 'Segura 🔒' },
+    ];
+
+    const nivel           = niveles[puntos];
+    fill.style.width      = nivel.pct;
+    fill.style.background = nivel.color;
+    label.textContent     = nivel.texto;
+    label.style.color     = nivel.color;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // VALIDACIÓN Y SUBMIT
+  // ══════════════════════════════════════════════════════════════
+  async function handleRegistroInstitucion() {
+    const alerta        = document.getElementById('registroInstAlert');
+    const nombreInst     = document.getElementById('nombreInst');
+    const tipoInst       = document.getElementById('tipoInst');
+    const rfc            = document.getElementById('rfc');
+    const correo         = document.getElementById('correoRegInst');
+    const password       = document.getElementById('passwordRegInst');
+    const confirmacion   = document.getElementById('confirmacionInst');
+    const captchaInput   = document.getElementById('captchaInputRegInst');
+    let valido           = true;
+
+    // ── Nombre de institución ───────────────────────────────
+    if (nombreInst.value.trim().length < 3) {
+      mostrarError(document.getElementById('campoNombreInst'), 'Ingresa el nombre de la institución.');
+      valido = false;
+    } else limpiarError(document.getElementById('campoNombreInst'));
+
+    // ── Tipo ─────────────────────────────────────────────────
+    if (!tipoInst.value) {
+      mostrarError(document.getElementById('campoTipoInst'), 'Selecciona un tipo de institución.');
+      valido = false;
+    } else limpiarError(document.getElementById('campoTipoInst'));
+
+    // ── RFC ──────────────────────────────────────────────────
+    if (rfc.value.trim().length < 3) {
+      mostrarError(document.getElementById('campoRFC'), 'Ingresa un RFC válido.');
+      valido = false;
+    } else limpiarError(document.getElementById('campoRFC'));
+
+    // ── Correo ───────────────────────────────────────────────
+    if (!REGEX_CORREO.test(correo.value.trim())) {
+      mostrarError(document.getElementById('campoCorreoRegInst'), 'Ingresa un correo válido.');
+      valido = false;
+    } else limpiarError(document.getElementById('campoCorreoRegInst'));
+
+    // ── Contraseña ───────────────────────────────────────────
+    if (password.value.length < 8) {
+      mostrarError(document.getElementById('campoPasswordRegInst'), 'La contraseña debe tener al menos 8 caracteres.');
+      valido = false;
+    } else limpiarError(document.getElementById('campoPasswordRegInst'));
+
+    // ── Confirmación ─────────────────────────────────────────
+    if (confirmacion.value !== password.value || confirmacion.value.length === 0) {
+      mostrarError(document.getElementById('campoConfirmacionInst'), 'Las contraseñas no coinciden.');
+      valido = false;
+    } else limpiarError(document.getElementById('campoConfirmacionInst'));
+
+    // ── Captcha ──────────────────────────────────────────────
+    if (captchaInput.value.trim().toUpperCase() !== _captchaRegInst) {
+      mostrarError(document.getElementById('campoCaptchaRegInst'), 'El código no coincide.');
+      generarCaptchaRegInst();
+      valido = false;
+    } else limpiarError(document.getElementById('campoCaptchaRegInst'));
+
+    if (!valido) {
+      mostrarAlerta(alerta, 'Revisa los campos marcados antes de continuar.', 'error');
+      return;
+    }
+
+    const btn = document.querySelector('#formRegistroInst .btn--primary');
+    btn.disabled    = true;
+    btn.textContent = 'Creando cuenta…';
+
+    try {
+      await registrarInstitucion({
+        nombreInstitucion: nombreInst.value.trim(),
+        tipo: tipoInst.value,
+        rfc: rfc.value.trim(),
+        correo: correo.value.trim(),
+        password: password.value
+      });
+
+      mostrarAlerta(alerta, '✅ Cuenta institucional creada. Ya puedes iniciar sesión.', 'success');
+      document.getElementById('formRegistroInst').reset();
+      evaluarFuerzaRegInst('');
+      generarCaptchaRegInst();
+
+    } catch (err) {
+      // Ej. "Ya existe una cuenta registrada con esa matrícula."
+      mostrarAlerta(alerta, err.message, 'error');
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Crear cuenta institucional';
+    }
+  }
+
+</script>
+
+</body>
+</html>
