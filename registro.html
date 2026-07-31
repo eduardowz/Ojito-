@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Crear cuenta · Juárez Observa</title>
+<link rel="icon" type="image/png" href="logo/logo.png">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -19,7 +20,7 @@
 
     <div class="auth__showcase-content">
       <span class="brand">
-        <span class="brand__mark"></span>
+         <img src="logo/logo.png" alt="logoJO" class="brand__logo">
         <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
       </span>
 
@@ -92,7 +93,7 @@
           <label for="password">Contraseña</label>
           <div class="input-group">
             <input class="input" type="password" id="password" name="password"
-                   placeholder="Mínimo 8 caracteres"
+                   placeholder="Mínimo 8 carácteres"
                    autocomplete="new-password" required minlength="8"
                    oninput="evaluarFuerzaRegistro(this.value)">
             <button type="button" class="input-group__action"
@@ -105,7 +106,7 @@
             </div>
             <span class="strength-label" id="strengthLabel"></span>
           </div>
-          <span class="hint">Usa al menos 8 caracteres, combinando letras, números y un símbolo.</span>
+          <span class="hint">Usa al menos 8 carácteres, combinando letras, números y símbolos.</span>
           <span class="field-error"></span>
         </div>
 
