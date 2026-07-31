@@ -4,10 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel institucional · Juárez Observa</title>
+<link rel="icon" type="image/png" href="logo/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <style>
   /* ══════════════════════════════════════════════════════════
      TOKENS · panel institucional
@@ -100,7 +102,13 @@
   .navbtn:hover{background:rgba(255,255,255,0.08);color:#fff;}
   .navbtn.is-active{background:#fff;color:var(--jo-indigo);font-weight:600;}
   .navbtn.is-active .navbtn__count{color:var(--jo-indigo);opacity:.55;}
-
+  .navbtn i{
+    color: #ffffff;
+}
+.navbtn.is-active i{
+    color: #1F1D2B; 
+}
+  
   .sidebar__foot{position:relative;padding-top:14px;border-top:1px solid rgba(255,255,255,0.14);}
   .btn-salir{
     width:100%;padding:10px 12px;border-radius:8px;
@@ -263,7 +271,7 @@
     <div class="sidebar__grid" id="sidebarGrid"><div class="watch-grid__lines"></div></div>
 
     <div class="sidebar__brand">
-      <span class="sidebar__brand-mark"></span>
+       <img src="logo/logo.png" alt="logoJO" class="brand__logo" style="height:30px; width:auto; max-width:30px; object-fit:contain; display:block; flex-shrink:0; font-family: Georgia, serif;">
       Juárez Observa
     </div>
 
@@ -273,14 +281,15 @@
       <div class="sidebar__inst-correo" id="instCorreo">—</div>
     </div>
 
-    <nav class="sidebar__nav">
-      <button class="navbtn is-active" data-view="bandeja">📥 Bandeja <span class="navbtn__count" id="cntBandeja"></span></button>
-      <button class="navbtn" data-view="mapa">🗺️ Mapa de reportes</button>
-      <button class="navbtn" data-view="historial">📜 Historial</button>
-      <button class="navbtn" data-view="metricas">📊 Métricas</button>
-      <button class="navbtn" data-view="generar">🧾 Generar reporte</button>
+  <nav class="sidebar__nav">
+      <button class="navbtn is-active" data-view="bandeja"><i class="fa-solid fa-inbox"></i>Bandeja <span class="navbtn__count" id="cntBandeja"></span></button>
+      <button class="navbtn" data-view="mapa"><i class="fa-solid fa-map-location-dot"></i> Mapa de reportes</button>
+      <button class="navbtn" data-view="historial"><i class="fa-solid fa-clock-rotate-left"></i>Historial</button>
+      <button class="navbtn" data-view="metricas"><i class="fa-solid fa-chart-line"></i> Métricas</button>
+      <button class="navbtn" data-view="generar"><i class="fa-regular fa-file-lines"></i>Generar reporte</button>
     </nav>
 
+    
     <div class="sidebar__foot">
       <button class="btn-salir" id="btnCerrarSesion">Cerrar sesión</button>
     </div>
