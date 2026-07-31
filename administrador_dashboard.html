@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel de administrador · Juárez Observa</title>
+<link rel="icon" type="image/png" href="logo/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <style>
   /* ══════════════════════════════════════════════════════════
      TOKENS · panel de administrador
@@ -63,12 +65,12 @@
     font-family:var(--font-display);
     font-size:19px;letter-spacing:.2px;
   }
-  .sidebar__brand-mark{
-    width:11px;height:11px;border-radius:2px;
-    background:#fff;
-    transform:rotate(45deg);
-    flex:none;
-  }
+   .sidebar__brand .brand__juarez {
+ font-family: 'Segoe UI', sans-serif; 
+ font-size: 16px;
+  font-weight: 500;
+ color: #fff;
+  } 
   .sidebar__role{
     position:relative;
     font-family:var(--font-mono);
@@ -277,6 +279,13 @@
     background:#fff;border-radius:14px;width:480px;max-width:100%;max-height:88vh;overflow-y:auto;
     padding:24px 26px 26px;transform:translateY(10px);transition:transform .15s;
   }
+  .navbtn i{
+    color: #ffffff;
+}
+
+.navbtn.is-active i{
+    color: #1F1D2B; 
+}
   .modal-overlay.is-open .modal{transform:translateY(0);}
   .modal__header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
   .modal__title{font-family:var(--font-display);font-size:20px;}
@@ -333,8 +342,8 @@
     <div class="sidebar__grid" id="sidebarGrid"><div class="watch-grid__lines"></div></div>
 
     <div class="sidebar__brand">
-      <span class="sidebar__brand-mark"></span>
-      Juárez Observa
+     <img src="logo/logo.png" alt="logoJO" class="brand__logo" style="height:30px; width:auto; max-width:30px; object-fit:contain; display:block; flex-shrink:0;">
+      <span class="brand__juarez">Juárez Observa</span>
     </div>
     <div class="sidebar__role">Panel de administración</div>
 
@@ -346,19 +355,19 @@
 
     <nav class="sidebar__nav">
       <div class="sidebar__nav-label">Operación</div>
-      <button class="navbtn is-active" data-view="usuarios">👤 Usuarios <span class="navbtn__count" id="cntUsuarios"></span></button>
-      <button class="navbtn" data-view="instituciones">🏛️ Instituciones <span class="navbtn__count" id="cntInstituciones"></span></button>
-      <button class="navbtn" data-view="reportes">📋 Reportes <span class="navbtn__count" id="cntReportes"></span></button>
-      <button class="navbtn" data-view="asignacion">🎯 Asignación manual <span class="navbtn__count" id="cntAsignacion"></span></button>
-      <button class="navbtn" data-view="actividad">🕓 Actividad</button>
+       <button class="navbtn is-active" data-view="usuarios"><i class="fa-regular fa-user" ></i>Usuarios <span class="navbtn__count" id="cntUsuarios"></span></button>
+      <button class="navbtn" data-view="instituciones"><i class="fa-solid fa-building-columns"></i> Instituciones <span class="navbtn__count" id="cntInstituciones"></span></button>
+      <button class="navbtn" data-view="reportes"><i class="fa-regular fa-file-lines"></i> Reportes <span class="navbtn__count" id="cntReportes"></span></button>
+      <button class="navbtn" data-view="asignacion"><i class="fa-solid fa-building-circle-check"></i> Asignación manual <span class="navbtn__count" id="cntAsignacion"></span></button>
+      <button class="navbtn" data-view="actividad"><i class="fa-regular fa-clock"></i> Actividad</button>
 
       <div class="sidebar__nav-label">Configuración</div>
-      <button class="navbtn" data-view="categorias">🏷️ Categorías</button>
-      <button class="navbtn" data-view="permisos">🔐 Permisos</button>
-      <button class="navbtn" data-view="parametros">⚙️ Parámetros</button>
+      <button class="navbtn" data-view="categorias"><i class="fa-solid fa-tag"></i> Categorías</button>
+      <button class="navbtn" data-view="permisos"><i class="fa-solid fa-user-lock"></i> Permisos</button>
+      <button class="navbtn" data-view="parametros"><i class="fa-solid fa-sliders"></i> Parámetros</button>
 
       <div class="sidebar__nav-label">Análisis</div>
-      <button class="navbtn" data-view="estadisticas">📊 Estadísticas globales</button>
+      <button class="navbtn" data-view="estadisticas"><i class="fa-solid fa-chart-column"></i>Estadísticas globales</button>
     </nav>
 
     <div class="sidebar__foot">
