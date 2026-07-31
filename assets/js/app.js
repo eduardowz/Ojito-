@@ -24,9 +24,18 @@ function mostrarAlerta(el, mensaje, tipo = 'error') {
 }
 
 // ── Sesión (ciudadano) ──────────────────────────────────────
-function crearSesion(correo, nombre = 'Usuario') {
-  const sesion = { correo, nombre, rol: 'ciudadano', expira: Date.now() + (8 * 60 * 60 * 1000) };
+function crearSesion(correo, nombre = 'Usuario', telefono = '') {
+
+  const sesion = {
+    correo,
+    nombre,
+    telefono,
+    rol: 'ciudadano',
+    expira: Date.now() + (8 * 60 * 60 * 1000)
+  };
+
   localStorage.setItem('jo_sesion', JSON.stringify(sesion));
+
 }
 
 function obtenerSesion() {
@@ -112,35 +121,62 @@ function _guardarUsuarios(usuarios) {
 }
 
 async function registrarUsuario({ nombre, correo, telefono, password }) {
-  const usuarios = _obtenerUsuarios();
-  const correoKey = correo.trim().toLowerCase();
 
-  if (usuarios[correoKey]) {
-    throw new Error('Ya existe una cuenta registrada con ese correo.');
-  }
-
-  // ✅ Evita cuentas cruzadas: un correo ya registrado como institución
-  // no puede volver a registrarse como ciudadano.
-  const instituciones = JSON.parse(localStorage.getItem('jo_instituciones') || '{}');
-  if (instituciones[correoKey]) {
-    throw new Error('Ese correo ya está registrado como cuenta institucional.');
-  }
-
+  // Seguimos generando el hash en el navegador,
+  // igual que hacía tu proyecto.
   const passwordHash = await hashPassword(password);
-  usuarios[correoKey] = { nombre, correo: correoKey, telefono, passwordHash };
-  _guardarUsuarios(usuarios);
-  return usuarios[correoKey];
+
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/registro", {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      nombre,
+      correo: correo.trim().toLowerCase(),
+      telefono,
+      passwordHash
+    })
+
+  });
+
+  const datos = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(datos.mensaje);
+  }
+
+  return datos;
+
 }
 
 async function verificarCredenciales(correo, password) {
-  const usuarios = _obtenerUsuarios();
-  const correoKey = correo.trim().toLowerCase();
-  const usuario = usuarios[correoKey];
-
-  if (!usuario) return null;
 
   const passwordHash = await hashPassword(password);
-  if (passwordHash !== usuario.passwordHash) return null;
 
-  return usuario;
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/login", {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      correo: correo.trim().toLowerCase(),
+      passwordHash
+    })
+  });
+
+
+  if (!respuesta.ok) {
+    return null;
+  }
+
+
+  const datos = await respuesta.json();
+
+  return datos.usuario;
 }

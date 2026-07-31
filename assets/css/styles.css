@@ -10,7 +10,6 @@
 body {
   font-family: 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, #0b3d2e, #14532d, #166534);
-  min-height: 100vh;
   color: #fff;
 }
 
@@ -20,7 +19,8 @@ body {
 .auth {
   display: grid;
   grid-template-columns: 1fr 480px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* =========================
@@ -29,6 +29,8 @@ body {
 .auth__showcase {
   background: #0d3d22;
   padding: 56px 48px;
+  height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -56,7 +58,7 @@ body {
 
 .auth__stats {
   margin-top: auto;
-  padding-top: 60px;
+  padding-top: 40px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -76,18 +78,24 @@ body {
 
 /* =========================
    PANEL FORMULARIO
+   ✅ margin: auto en .auth__form-wrap centra el formulario cuando
+   es corto (login) pero cede y se ancla arriba cuando el contenido
+   es más alto que la pantalla (registro institucional) — así
+   siempre empiezas viendo el logo/título, nunca a media pantalla.
 ========================= */
 .auth__panel {
   background: #ffffff;
+  height: 100%;
+  overflow-y: auto;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
 }
 
 .auth__form-wrap {
-  padding: 36px 44px 40px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 0;
+  margin: auto 0;
 }
 
 .auth__title {
@@ -101,7 +109,7 @@ body {
   color: #6b7280;
   margin-top: 6px;
   line-height: 1.5;
-  margin-bottom: 32px;
+  margin-bottom: 22px;
 }
 
 /* =========================
@@ -111,7 +119,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 36px;
+  margin-bottom: 24px;
 }
 
 .brand__mark {
@@ -138,7 +146,7 @@ body {
    CAMPOS
 ========================= */
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .field label {
@@ -151,7 +159,7 @@ body {
 
 .input {
   width: 100%;
-  padding: 13px 16px;
+  padding: 11px 16px;
   border: 1.5px solid #d1d5db;
   border-radius: 10px;
   font-size: 14px;
@@ -279,8 +287,15 @@ a:hover {
 }
 
 .alert--error {
+  display: block;
   background: #fee2e2;
   color: #991b1b;
+}
+
+.alert--success {
+  display: block;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .field-error {
@@ -320,9 +335,25 @@ a:hover {
 /* =========================
    RESPONSIVE
 ========================= */
+@media (max-width: 1180px) {
+  .auth {
+    grid-template-columns: 1fr 420px;
+  }
+
+  .auth__showcase {
+    padding: 44px 36px;
+  }
+
+  .auth__headline {
+    font-size: 27px;
+  }
+}
+
 @media (max-width: 860px) {
   .auth {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
   }
 
   .auth__showcase {
@@ -330,6 +361,12 @@ a:hover {
   }
 
   .auth__panel {
+    height: auto;
     min-height: 100vh;
+  }
+
+  .auth__form-wrap {
+    padding: 32px 24px;
+    margin: 0 auto;
   }
 }

@@ -34,19 +34,43 @@ async function sembrarAdminPorDefecto() {
   _guardarAdmins(admins);
 }
 
-// ── verificación de credenciales (usada en login.html) ──────
+// ── verificación de credenciales administrador ────────────────
 async function verificarCredencialesAdmin(correo, password) {
-  const admins = _obtenerAdmins();
-  const correoKey = correo.trim().toLowerCase();
-  const admin = admins[correoKey];
-
-  if (!admin) return null;
 
   const passwordHash = await hashPassword(password);
-  if (passwordHash !== admin.passwordHash) return null;
 
-  return admin;
+
+  const respuesta = await fetch(
+    "http://localhost:3000/api/admin/login",
+    {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        correo: correo.trim().toLowerCase(),
+        passwordHash
+      })
+
+    }
+  );
+
+
+  if (!respuesta.ok) {
+    return null;
+  }
+
+
+  const datos = await respuesta.json();
+
+
+  return datos.admin;
+
 }
+
 
 // ── sesión (mismo patrón que crearSesion/obtenerSesion/requireSesion) ──
 function crearSesionAdmin(correo, nombre = 'Administrador') {

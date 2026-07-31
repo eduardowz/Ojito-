@@ -11,10 +11,6 @@
 <style>
   /* ══════════════════════════════════════════════════════════
      TOKENS · panel institucional
-     Reutiliza la retícula del login como fondo decorativo y el
-     monospace de los códigos captcha como fuente de datos/UI.
-     El mapa de reportes ahora usa Leaflet, igual que en el rol
-     de ciudadanos, en vez de una retícula simulada.
      ══════════════════════════════════════════════════════════ */
   :root{
     --jo-cream:#F4F3F0;
@@ -39,14 +35,12 @@
     -webkit-font-smoothing:antialiased;
   }
 
-  /* ── layout raíz ─────────────────────────────────────────── */
   .panel{
     display:grid;
     grid-template-columns:272px 1fr;
     min-height:100vh;
   }
 
-  /* ── sidebar ─────────────────────────────────────────────── */
   .sidebar{
     position:relative;
     background:var(--jo-indigo);
@@ -116,7 +110,6 @@
   }
   .btn-salir:hover{background:rgba(255,255,255,0.1);}
 
-  /* ── main ────────────────────────────────────────────────── */
   .main{padding:30px 40px 60px;max-width:1180px;}
   .main__header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:26px;gap:20px;flex-wrap:wrap;}
   .main__eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--jo-terracotta);}
@@ -126,7 +119,6 @@
   .view{display:none;}
   .view.is-active{display:block;}
 
-  /* ── stat cards ──────────────────────────────────────────── */
   .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
   .statcard{background:#fff;border:1px solid var(--jo-line);border-radius:12px;padding:16px 18px;}
   .statcard__label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:#847f97;}
@@ -135,7 +127,6 @@
   .statcard--proceso .statcard__value{color:var(--jo-steel);}
   .statcard--resuelto .statcard__value{color:var(--jo-forest);}
 
-  /* ── filtros / tabs ──────────────────────────────────────── */
   .tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
   .tab{
     padding:7px 14px;border-radius:999px;border:1px solid var(--jo-line);
@@ -144,7 +135,6 @@
   }
   .tab.is-active{background:var(--jo-ink);color:#fff;border-color:var(--jo-ink);}
 
-  /* ── tarjeta de reporte ──────────────────────────────────── */
   .rep-list{display:flex;flex-direction:column;gap:10px;}
   .rep-card{
     display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:16px;
@@ -169,7 +159,6 @@
   }
   .empty__title{font-family:var(--font-display);font-size:20px;}
   .empty__sub{color:#847f97;font-size:13.5px;margin-top:6px;}
-  .empty .btn{margin-top:18px;}
 
   .btn{
     font-family:var(--font-body);font-weight:600;font-size:13.5px;
@@ -180,16 +169,14 @@
   .btn--sm{padding:6px 12px;font-size:12.5px;}
   .btn--forest{background:var(--jo-forest);border-color:var(--jo-forest);}
 
-  /* ── mapa (Leaflet real, igual que en el rol de ciudadanos) ─ */
   .mapa-frame{
     position:relative;height:480px;border-radius:14px;overflow:hidden;
     border:1px solid var(--jo-line);
-    background:#e7e5df; /* fallback mientras carga el tile layer */
+    background:#e7e5df;
   }
   .mapa-frame .leaflet-container{
     width:100%;height:100%;font-family:var(--font-body);
   }
-  /* popups de Leaflet con la tipografía/paleta del panel */
   .mapa-popup{font-family:var(--font-body);font-size:13px;min-width:150px;}
   .mapa-popup__cat{font-weight:600;font-size:13.5px;margin-bottom:2px;}
   .mapa-popup__dir{color:#5b5870;font-size:12px;margin-bottom:6px;}
@@ -202,7 +189,6 @@
   .mapa-legend span{display:inline-flex;align-items:center;gap:6px;}
   .mapa-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
 
-  /* ── historial ───────────────────────────────────────────── */
   table.hist{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--jo-line);border-radius:10px;overflow:hidden;}
   table.hist th{
     text-align:left;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;
@@ -211,7 +197,6 @@
   table.hist td{padding:12px 14px;border-bottom:1px solid var(--jo-line-soft);font-size:13.5px;}
   table.hist tr:last-child td{border-bottom:none;}
 
-  /* ── métricas ────────────────────────────────────────────── */
   .metric-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;}
   .card-box{background:#fff;border:1px solid var(--jo-line);border-radius:12px;padding:20px;}
   .card-box__title{font-family:var(--font-display);font-size:16px;margin-bottom:14px;}
@@ -221,12 +206,10 @@
   .bar-row__fill{height:100%;border-radius:5px;}
   .bar-row__val{width:26px;text-align:right;font-family:var(--font-mono);font-size:12px;color:#5b5870;}
 
-  /* ── generar reporte ─────────────────────────────────────── */
   .gen-box{background:#fff;border:1px solid var(--jo-line);border-radius:12px;padding:26px;}
   .gen-box p{font-size:14px;color:#5b5870;line-height:1.6;max-width:60ch;}
   .gen-actions{display:flex;gap:10px;margin-top:18px;}
 
-  /* ── panel de detalle (slide-over) ──────────────────────── */
   .overlay{
     position:fixed;inset:0;background:rgba(31,29,43,.35);
     opacity:0;pointer-events:none;transition:opacity .18s;z-index:40;
@@ -255,8 +238,7 @@
   }
   .obs-item{padding:10px 0;border-top:1px solid var(--jo-line-soft);}
   .obs-item__meta{font-family:var(--font-mono);font-size:10.5px;color:#a39dae;margin-bottom:3px;}
-  .fotos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
-  .fotos-grid img{width:100%;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--jo-line);}
+  .obs-item img{width:100%;max-height:160px;object-fit:cover;border-radius:6px;margin-top:6px;border:1px solid var(--jo-line);}
   .upload-btn{
     display:inline-block;font-size:12.5px;padding:8px 12px;border-radius:7px;
     border:1px dashed var(--jo-line);color:#5b5870;cursor:pointer;text-align:center;width:100%;
@@ -320,10 +302,10 @@
       <div class="stats-row" id="statsRow"></div>
 
       <div class="tabs" id="tabsEstado">
-        <button class="tab is-active" data-estado="Todos">Todos</button>
-        <button class="tab" data-estado="Pendiente">Pendiente</button>
-        <button class="tab" data-estado="En proceso">En proceso</button>
-        <button class="tab" data-estado="Resuelto">Resuelto</button>
+        <button class="tab is-active" data-estado="todos">Todos</button>
+        <button class="tab" data-estado="pendiente">Pendiente</button>
+        <button class="tab" data-estado="revision">En proceso</button>
+        <button class="tab" data-estado="resuelto">Resuelto</button>
       </div>
 
       <div class="rep-list" id="listaBandeja"></div>
@@ -415,25 +397,21 @@
   <div class="detail__section">
     <div class="detail__label">Cambiar estado</div>
     <select class="jo-select" id="detailEstadoSelect">
-      <option value="Pendiente">Pendiente</option>
-      <option value="En proceso">En proceso</option>
-      <option value="Resuelto">Resuelto</option>
+      <option value="pendiente">Pendiente</option>
+      <option value="revision">En proceso</option>
+      <option value="resuelto">Resuelto</option>
     </select>
   </div>
 
   <div class="detail__section">
-    <div class="detail__label">Evidencia fotográfica</div>
-    <label class="upload-btn">
-      Subir foto
+    <div class="detail__label">Registrar avance (evidencia para la ciudadanía)</div>
+    <textarea class="jo-textarea" id="detailObsInput" placeholder="Describe qué se hizo…"></textarea>
+    <label class="upload-btn" style="margin-top:8px;">
+      📷 Adjuntar foto de evidencia (opcional)
       <input type="file" id="detailFotoInput" accept="image/*" style="display:none;">
     </label>
-    <div class="fotos-grid" id="detailFotos"></div>
-  </div>
-
-  <div class="detail__section">
-    <div class="detail__label">Agregar observación</div>
-    <textarea class="jo-textarea" id="detailObsInput" placeholder="Escribe una nota de seguimiento…"></textarea>
-    <button class="btn btn--sm" id="detailObsBtn" style="margin-top:8px;">Agregar</button>
+    <div id="detailFotoPreview" style="margin-top:6px;font-size:12px;color:#5b5870;"></div>
+    <button class="btn btn--sm" id="detailObsBtn" style="margin-top:10px;">Guardar avance</button>
     <div id="detailObsLista"></div>
   </div>
 
@@ -446,36 +424,37 @@
 <script>
   // ══════════════════════════════════════════════════════════
   // ESTADO DE LA PÁGINA
+  // Nota: todas las funciones de institucion.js son async ahora
+  // (hacen fetch al backend real), así que todo lo que las llama
+  // aquí también es async y usa await.
   // ══════════════════════════════════════════════════════════
   let SESION       = null;
   let TIPO         = null;
-  let filtroEstado = 'Todos';
+  let filtroEstado = 'todos';
   let reporteActivoId = null;
+  let fotoPendiente = ''; // dataURL de la foto seleccionada, antes de guardar el avance
 
-  // Estado del mapa Leaflet (igual patrón que en el rol de ciudadanos)
   let institucionMap       = null;
   let institucionMarkersLG = null;
 
   const COLOR_ESTADO = {
-    'Pendiente':   'var(--jo-terracotta)',
-    'En proceso':  'var(--jo-steel)',
-    'Resuelto':    'var(--jo-forest)'
+    'pendiente': 'var(--jo-terracotta)',
+    'revision':  'var(--jo-steel)',
+    'resuelto':  'var(--jo-forest)'
   };
-  // Colores en hex para usarlos directamente en los círculos de Leaflet
   const COLOR_ESTADO_HEX = {
-    'Pendiente':   '#993C1D',
-    'En proceso':  '#185FA5',
-    'Resuelto':    '#0F6E56'
+    'pendiente': '#993C1D',
+    'revision':  '#185FA5',
+    'resuelto':  '#0F6E56'
   };
   const BADGE_CLASE = {
-    'Pendiente':'badge--pendiente','En proceso':'badge--proceso','Resuelto':'badge--resuelto'
+    'pendiente':'badge--pendiente','revision':'badge--proceso','resuelto':'badge--resuelto'
   };
 
-  // Centro por defecto: Ciudad Juárez, Chihuahua
   const JUAREZ_CENTER = [31.6904, -106.4245];
   const JUAREZ_ZOOM   = 12;
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     SESION = requireSesionInstitucion('login.html');
     if (!SESION) return;
     TIPO = SESION.tipo;
@@ -493,15 +472,20 @@
 
     document.getElementById('btnCerrarSesion').addEventListener('click', () => cerrarSesionInstitucion('login.html'));
 
-    renderTodo();
+    await renderTodo();
   });
 
-  function renderTodo(){
-    renderBandeja();
-    renderMapa();
-    renderHistorial();
-    renderMetricas();
-    renderGenerar();
+  async function renderTodo(){
+    try {
+      await renderBandeja();
+      await renderMapa();
+      await renderHistorial();
+      await renderMetricas();
+      await renderGenerar();
+    } catch (error) {
+      console.error('Error cargando datos institucionales:', error);
+      mostrarToast('No se pudo conectar con el servidor. Revisa que el backend esté corriendo.');
+    }
   }
 
   // ══════════════════════════════════════════════════════════
@@ -509,37 +493,37 @@
   // ══════════════════════════════════════════════════════════
   function initNav(){
     document.querySelectorAll('.navbtn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         document.querySelectorAll('.navbtn').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('is-active'));
         document.getElementById('view-' + btn.dataset.view).classList.add('is-active');
-        if (btn.dataset.view === 'mapa') renderMapa();
+        if (btn.dataset.view === 'mapa') await renderMapa();
       });
     });
   }
 
   function initTabs(){
-    document.getElementById('tabsEstado').addEventListener('click', (e) => {
+    document.getElementById('tabsEstado').addEventListener('click', async (e) => {
       const tab = e.target.closest('.tab');
       if (!tab) return;
       document.querySelectorAll('#tabsEstado .tab').forEach(t => t.classList.remove('is-active'));
       tab.classList.add('is-active');
       filtroEstado = tab.dataset.estado;
-      renderBandeja();
+      await renderBandeja();
     });
   }
 
   // ══════════════════════════════════════════════════════════
   // BANDEJA
   // ══════════════════════════════════════════════════════════
-  function renderBandeja(){
-    const todos = obtenerReportesPorInstitucion(TIPO);
-    document.getElementById('cntBandeja').textContent = todos.filter(r => r.estado !== 'Resuelto').length || '';
+  async function renderBandeja(){
+    const todos = await obtenerReportesPorInstitucion(TIPO);
+    document.getElementById('cntBandeja').textContent = todos.filter(r => r.estado !== 'resuelto').length || '';
 
-    const pendientes = todos.filter(r => r.estado === 'Pendiente').length;
-    const proceso    = todos.filter(r => r.estado === 'En proceso').length;
-    const resueltos  = todos.filter(r => r.estado === 'Resuelto').length;
+    const pendientes = todos.filter(r => r.estado === 'pendiente').length;
+    const proceso    = todos.filter(r => r.estado === 'revision').length;
+    const resueltos  = todos.filter(r => r.estado === 'resuelto').length;
 
     document.getElementById('statsRow').innerHTML = `
       <div class="statcard"><div class="statcard__label">Total asignados</div><div class="statcard__value">${todos.length}</div></div>
@@ -549,22 +533,19 @@
     `;
 
     const lista = document.getElementById('listaBandeja');
-    const filtrados = filtroEstado === 'Todos' ? todos : todos.filter(r => r.estado === filtroEstado);
+    const filtrados = filtroEstado === 'todos' ? todos : todos.filter(r => r.estado === filtroEstado);
 
     if (todos.length === 0){
       lista.innerHTML = `
         <div class="empty">
           <div class="empty__title">Sin reportes por ahora</div>
-          <div class="empty__sub">Aún no hay reportes ciudadanos asignados a ${TIPO}.</div>
-          <button class="btn" id="btnSembrar">Generar reportes de prueba</button>
+          <div class="empty__sub">Aún no hay reportes ciudadanos asignados a ${TIPO}. En cuanto un ciudadano registre un reporte de este tipo, aparecerá aquí automáticamente.</div>
         </div>`;
-      const sBtn = document.getElementById('btnSembrar');
-      if (sBtn) sBtn.addEventListener('click', () => { _sembrarReportesDemo(TIPO); renderTodo(); });
       return;
     }
 
     if (filtrados.length === 0){
-      lista.innerHTML = `<div class="empty"><div class="empty__title">Nada en “${filtroEstado}”</div><div class="empty__sub">Cambia el filtro para ver otros reportes.</div></div>`;
+      lista.innerHTML = `<div class="empty"><div class="empty__title">Nada en “${ESTADO_LABELS[filtroEstado] || filtroEstado}”</div><div class="empty__sub">Cambia el filtro para ver otros reportes.</div></div>`;
       return;
     }
 
@@ -584,12 +565,12 @@
           <div class="rep-card__dir">${r.direccion} · ${fecha}</div>
         </div>
         <span class="rep-card__id">#${r.id.slice(-6)}</span>
-        <span class="badge ${BADGE_CLASE[r.estado]}">${r.estado}</span>
+        <span class="badge ${BADGE_CLASE[r.estado]}">${ESTADO_LABELS[r.estado]}</span>
       </div>`;
   }
 
   // ══════════════════════════════════════════════════════════
-  // MAPA — Leaflet real, igual mecánica que el rol de ciudadanos
+  // MAPA — Leaflet real
   // ══════════════════════════════════════════════════════════
   function asegurarMapaInstitucion(){
     if (institucionMap) return;
@@ -605,10 +586,10 @@
     institucionMarkersLG = L.layerGroup().addTo(institucionMap);
   }
 
-  function renderMapa(){
+  async function renderMapa(){
     asegurarMapaInstitucion();
 
-    const reportes = obtenerReportesPorInstitucion(TIPO);
+    const reportes = await obtenerReportesPorInstitucion(TIPO);
     institucionMarkersLG.clearLayers();
 
     reportes.forEach(r => {
@@ -642,16 +623,14 @@
       institucionMap.setView(JUAREZ_CENTER, JUAREZ_ZOOM);
     }
 
-    // El contenedor puede haber estado oculto (display:none) al inicializar el mapa;
-    // hay que forzar un recalculo de tamaño al mostrarlo.
     setTimeout(() => institucionMap.invalidateSize(), 0);
   }
 
   // ══════════════════════════════════════════════════════════
   // HISTORIAL
   // ══════════════════════════════════════════════════════════
-  function renderHistorial(){
-    const resueltos = obtenerHistorialInstitucion(TIPO);
+  async function renderHistorial(){
+    const resueltos = await obtenerHistorialInstitucion(TIPO);
     const wrap = document.getElementById('historialWrap');
     if (resueltos.length === 0){
       wrap.innerHTML = `<div class="empty"><div class="empty__title">Aún no hay reportes resueltos</div><div class="empty__sub">Cuando cierres un reporte, aparecerá aquí.</div></div>`;
@@ -677,8 +656,8 @@
   // ══════════════════════════════════════════════════════════
   // MÉTRICAS
   // ══════════════════════════════════════════════════════════
-  function renderMetricas(){
-    const m = calcularMetricas(TIPO);
+  async function renderMetricas(){
+    const m = await calcularMetricas(TIPO);
     document.getElementById('statsMetricas').innerHTML = `
       <div class="statcard"><div class="statcard__label">Total</div><div class="statcard__value">${m.total}</div></div>
       <div class="statcard statcard--pendiente"><div class="statcard__label">Pendientes</div><div class="statcard__value">${m.pendientes}</div></div>
@@ -686,8 +665,7 @@
       <div class="statcard"><div class="statcard__label">Tiempo prom.</div><div class="statcard__value">${m.promedioHoras}h</div></div>
     `;
 
-    // Distribución por categoría
-    const reportes = obtenerReportesPorInstitucion(TIPO);
+    const reportes = await obtenerReportesPorInstitucion(TIPO);
     const porCat = {};
     reportes.forEach(r => { porCat[r.categoria] = (porCat[r.categoria] || 0) + 1; });
     const maxCat = Math.max(1, ...Object.values(porCat));
@@ -700,7 +678,6 @@
         </div>`).join('')
       : '<p style="color:#847f97;font-size:13px;">Sin datos aún.</p>';
 
-    // Distribución por estado
     const estados = [
       {k:'Pendiente', v:m.pendientes, c:'var(--jo-terracotta)'},
       {k:'En proceso', v:m.enProceso, c:'var(--jo-steel)'},
@@ -718,9 +695,9 @@
   // ══════════════════════════════════════════════════════════
   // GENERAR REPORTE INSTITUCIONAL
   // ══════════════════════════════════════════════════════════
-  function renderGenerar(){
-    const reportes = obtenerReportesPorInstitucion(TIPO);
-    const m = calcularMetricas(TIPO);
+  async function renderGenerar(){
+    const reportes = await obtenerReportesPorInstitucion(TIPO);
+    const m = await calcularMetricas(TIPO);
     document.getElementById('genResumen').textContent =
       `${TIPO} tiene ${m.total} reportes registrados: ${m.pendientes} pendientes, ${m.enProceso} en proceso y ${m.resueltos} resueltos, con un tiempo promedio de atención de ${m.promedioHoras} horas. El archivo incluye el detalle de cada reporte.`;
 
@@ -731,8 +708,8 @@
   function descargarCsv(reportes){
     const encabezado = ['ID','Categoría','Descripción','Dirección','Estado','Creado','Actualizado'];
     const filas = reportes.map(r => [
-      r.id, r.categoria, r.descripcion.replace(/[\n,]/g,' '), r.direccion.replace(/,/g,' '),
-      r.estado, new Date(r.fechaCreacion).toISOString(), new Date(r.fechaActualizacion).toISOString()
+      r.id, r.categoria, r.descripcion.replace(/[\n,]/g,' '), (r.direccion || '').replace(/,/g,' '),
+      ESTADO_LABELS[r.estado] || r.estado, new Date(r.fechaCreacion).toISOString(), new Date(r.fechaActualizacion).toISOString()
     ]);
     const csv = [encabezado, ...filas].map(f => f.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -751,37 +728,57 @@
     document.getElementById('overlay').addEventListener('click', cerrarDetalle);
     document.getElementById('detailClose').addEventListener('click', cerrarDetalle);
 
-    document.getElementById('detailEstadoSelect').addEventListener('change', (e) => {
+    document.getElementById('detailEstadoSelect').addEventListener('change', async (e) => {
       if (!reporteActivoId) return;
-      cambiarEstadoReporte(reporteActivoId, e.target.value);
-      refrescarDetalle();
-      renderTodo();
+      try {
+        await cambiarEstadoReporte(reporteActivoId, e.target.value);
+        await refrescarDetalle();
+        await renderTodo();
+      } catch (error) {
+        mostrarToast(error.message);
+      }
     });
 
-    document.getElementById('detailResueltoBtn').addEventListener('click', () => {
+    document.getElementById('detailResueltoBtn').addEventListener('click', async () => {
       if (!reporteActivoId) return;
-      marcarResuelto(reporteActivoId);
-      refrescarDetalle();
-      renderTodo();
+      try {
+        await marcarResuelto(reporteActivoId);
+        await refrescarDetalle();
+        await renderTodo();
+      } catch (error) {
+        mostrarToast(error.message);
+      }
     });
 
-    document.getElementById('detailObsBtn').addEventListener('click', () => {
+    document.getElementById('detailObsBtn').addEventListener('click', async () => {
       if (!reporteActivoId) return;
       const input = document.getElementById('detailObsInput');
       const texto = input.value.trim();
-      if (!texto) return;
-      agregarObservacion(reporteActivoId, texto, SESION.nombre);
-      input.value = '';
-      refrescarDetalle();
+
+      if (!texto && !fotoPendiente) {
+        mostrarToast('Escribe una nota o adjunta una foto antes de guardar.');
+        return;
+      }
+
+      try {
+        await agregarAvance(reporteActivoId, { texto, foto: fotoPendiente }, SESION.nombre);
+        input.value = '';
+        fotoPendiente = '';
+        document.getElementById('detailFotoPreview').textContent = '';
+        document.getElementById('detailFotoInput').value = '';
+        await refrescarDetalle();
+      } catch (error) {
+        mostrarToast(error.message);
+      }
     });
 
     document.getElementById('detailFotoInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
-      if (!file || !reporteActivoId) return;
+      if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        agregarFotoEvidencia(reporteActivoId, reader.result);
-        refrescarDetalle();
+        fotoPendiente = reader.result;
+        document.getElementById('detailFotoPreview').textContent = `📎 ${file.name} lista para adjuntar`;
       };
       reader.readAsDataURL(file);
     });
@@ -796,32 +793,31 @@
 
   function cerrarDetalle(){
     reporteActivoId = null;
+    fotoPendiente = '';
     document.getElementById('overlay').classList.remove('is-open');
     document.getElementById('detailPanel').classList.remove('is-open');
   }
 
-  function refrescarDetalle(){
-    const r = obtenerReportePorId(reporteActivoId);
+  async function refrescarDetalle(){
+    const r = await obtenerReportePorId(reporteActivoId);
     if (!r) { cerrarDetalle(); return; }
 
-    document.getElementById('detailBadge').textContent = r.estado;
+    document.getElementById('detailBadge').textContent = ESTADO_LABELS[r.estado];
     document.getElementById('detailBadge').className = 'badge ' + BADGE_CLASE[r.estado];
     document.getElementById('detailCat').textContent = r.categoria;
     document.getElementById('detailDir').textContent = r.direccion;
     document.getElementById('detailDesc').textContent = r.descripcion;
     document.getElementById('detailEstadoSelect').value = r.estado;
 
-    document.getElementById('detailFotos').innerHTML = (r.fotos || [])
-      .map(src => `<img src="${src}" alt="Evidencia">`).join('');
-
-    const obs = (r.observaciones || []).slice().reverse();
-    document.getElementById('detailObsLista').innerHTML = obs.length
-      ? obs.map(o => `
+    const bitacora = (r.bitacora || []).slice().reverse();
+    document.getElementById('detailObsLista').innerHTML = bitacora.length
+      ? bitacora.map(b => `
         <div class="obs-item">
-          <div class="obs-item__meta">${o.autor} · ${new Date(o.fecha).toLocaleString('es-MX')}</div>
-          <div>${o.texto}</div>
+          <div class="obs-item__meta">${b.autor} · ${new Date(b.fecha).toLocaleString('es-MX')}</div>
+          ${b.texto ? `<div>${b.texto}</div>` : ''}
+          ${b.foto ? `<img src="${b.foto}" alt="Evidencia de avance">` : ''}
         </div>`).join('')
-      : '<p style="color:#a39dae;font-size:12.5px;margin-top:8px;">Sin observaciones todavía.</p>';
+      : '<p style="color:#a39dae;font-size:12.5px;margin-top:8px;">Sin avances registrados todavía.</p>';
   }
 </script>
 </body>

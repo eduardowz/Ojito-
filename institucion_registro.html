@@ -26,7 +26,7 @@
       <p class="auth__eyebrow" style="margin-top:40px;">Alta institucional</p>
       <h1 class="auth__headline">Conecta a tu institución <em>con la ciudadanía.</em></h1>
       <p class="auth__lede">
-        Registra una cuenta con tu matrícula o número de empleado para
+        Registra una cuenta con el RFC oficial de tu institución para
         acceder al panel de atención de reportes.
       </p>
     </div>
@@ -42,8 +42,7 @@
       </span>
 
       <h2 class="auth__title">Registro institucional</h2>
-      <p class="auth__subtitle">Solo personal autorizado con matrícula vigente puede crear una cuenta.</p>
-
+      <p class="auth__subtitle">Solo instituciones registradas con RFC válido pueden crear una cuenta.</p>
       <div class="alert" id="registroInstAlert"></div>
 
       <form id="formRegistroInst" novalidate>
@@ -63,11 +62,11 @@
           <span class="field-error"></span>
         </div>
 
-        <div class="field" id="campoMatricula">
-          <label for="matricula">Matrícula o número de empleado</label>
-          <input class="input" type="text" id="matricula" name="matricula"
-                 placeholder="Ej. PM-4821" autocomplete="off" required minlength="3">
-          <span class="hint">Solo se acepta personal con matrícula registrada ante la institución.</span>
+        <div class="field" id="campoRFC">
+          <label for="rfc">RFC de institución:</label>
+          <input class="input" type="text" id="rfc" name="rfc"
+                placeholder="Ej. JOC850101ABC" autocomplete="off" required minlength="3">
+          <span class="hint">Solo se acepta el rfc registrado ante la institución.</span>
           <span class="field-error"></span>
         </div>
 
@@ -253,7 +252,7 @@
     const alerta        = document.getElementById('registroInstAlert');
     const nombreInst     = document.getElementById('nombreInst');
     const tipoInst       = document.getElementById('tipoInst');
-    const matricula      = document.getElementById('matricula');
+    const rfc            = document.getElementById('rfc');
     const correo         = document.getElementById('correoRegInst');
     const password       = document.getElementById('passwordRegInst');
     const confirmacion   = document.getElementById('confirmacionInst');
@@ -272,11 +271,11 @@
       valido = false;
     } else limpiarError(document.getElementById('campoTipoInst'));
 
-    // ── Matrícula ────────────────────────────────────────────
-    if (matricula.value.trim().length < 3) {
-      mostrarError(document.getElementById('campoMatricula'), 'Ingresa tu matrícula o número de empleado.');
+    // ── RFC ──────────────────────────────────────────────────
+    if (rfc.value.trim().length < 3) {
+      mostrarError(document.getElementById('campoRFC'), 'Ingresa un RFC válido.');
       valido = false;
-    } else limpiarError(document.getElementById('campoMatricula'));
+    } else limpiarError(document.getElementById('campoRFC'));
 
     // ── Correo ───────────────────────────────────────────────
     if (!REGEX_CORREO.test(correo.value.trim())) {
@@ -316,7 +315,7 @@
       await registrarInstitucion({
         nombreInstitucion: nombreInst.value.trim(),
         tipo: tipoInst.value,
-        matricula: matricula.value.trim(),
+        rfc: rfc.value.trim(),
         correo: correo.value.trim(),
         password: password.value
       });

@@ -346,11 +346,23 @@
     }
 
     // ── 2) ¿Coincide como ciudadano? ───────────────────────────
+    // ── 2) ¿Coincide como ciudadano? ───────────────────────────
     const usuario = await verificarCredenciales(correoVal, passwordVal);
+
     if (usuario) {
-      crearSesion(usuario.correo, usuario.nombre);
+
+      crearSesion(
+        usuario.correo,
+        usuario.nombre,
+        usuario.telefono
+      );
+
       mostrarAlerta(alerta, '✅ Credenciales correctas. Redirigiendo…', 'success');
-      setTimeout(() => { window.location.href = 'ciudadano.html'; }, 900);
+
+      setTimeout(() => {
+        window.location.href = 'ciudadano.html';
+      }, 900);
+
       return;
     }
 

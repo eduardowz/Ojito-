@@ -1,9 +1,4 @@
-// ══════════════════════════════════════════════════════════════
-// JUÁREZ OBSERVA · institucion.js
-// Lógica específica del rol "Institución Responsable"
-// Requiere que assets/js/app.js esté cargado ANTES de este archivo
-// (usa hashPassword, mostrarError, limpiarError, mostrarAlerta)
-// ══════════════════════════════════════════════════════════════
+const API_BASE = 'http://localhost:3000/api';
 
 const TIPOS_INSTITUCION = [
   'Policía Municipal',
@@ -17,100 +12,125 @@ const TIPOS_INSTITUCION = [
   'Parques y Jardines'
 ];
 
-const ESTADOS_REPORTE = ['Pendiente', 'En proceso', 'Resuelto'];
+// ══════════════════════════════════════════════════════════════
+// Fallback SOLO para reportes viejos que se hayan creado antes de
+// que crearReporte() asignara `institucion` en el servidor (se
+// quedaron con institucion: ""). Todo reporte nuevo ya trae el
+// campo lleno desde el backend, así que este mapeo debería dejar
+// de usarse con el tiempo. No lo uses para nada más.
+// ══════════════════════════════════════════════════════════════
+const TIPO_A_INSTITUCION_FALLBACK = {
+  bache: 'Obras Públicas',
+  alumbrado: 'Alumbrado Público',
+  basura: 'Servicios de Limpia',
+  seguridad: 'Policía Municipal',
+  incendio: 'Bomberos',
+  vandalismo: 'Policía Municipal',
+};
 
-// ══════════════════════════════════════════════════════════════
-// ALMACÉN DE INSTITUCIONES (simulado con localStorage)
-// ⚠️ Solo para pruebas/demo. En producción esto vive en un
-// backend real con base de datos, nunca en el navegador.
-// ══════════════════════════════════════════════════════════════
-function _obtenerInstituciones() {
-  try { return JSON.parse(localStorage.getItem('jo_instituciones')) || {}; }
-  catch { return {}; }
+function institucionDeReporte(r) {
+  return r.institucion || TIPO_A_INSTITUCION_FALLBACK[r.tipo] || null;
 }
 
-function _guardarInstituciones(instituciones) {
-  localStorage.setItem('jo_instituciones', JSON.stringify(instituciones));
-}
+// Estados reales del enum de Mongo (models/Reporte.js)
+const ESTADOS_REPORTE = ['pendiente', 'revision', 'resuelto'];
 
-async function registrarInstitucion({ nombreInstitucion, tipo, matricula, correo, password }) {
-  const instituciones      = _obtenerInstituciones();
-  const correoKey          = correo.trim().toLowerCase();
-  const nombreInstLimpio   = (nombreInstitucion || '').trim();
-  const tipoLimpio         = (tipo || '').trim();
-  const matriculaLimpia    = (matricula || '').trim();
-  // ✅ FIX: clave normalizada (mayúsculas/espacios) solo para comparar,
-  // sin alterar cómo se guarda la matrícula original.
-  const matriculaComparar  = matriculaLimpia.toLowerCase();
+const ESTADO_LABELS = {
+  pendiente: 'Pendiente',
+  revision: 'En proceso',
+  resuelto: 'Resuelto',
+};
 
-  // ✅ FIX: el nombre de la institución ahora también se valida aquí,
-  // no solo se confía en el "required" del HTML.
+// Progreso sugerido al cambiar de estado (ajústalo si lo quieres manual)
+const PROGRESO_POR_ESTADO = {
+  pendiente: 0,
+  revision: 50,
+  resuelto: 100,
+};
+
+async function registrarInstitucion({ nombreInstitucion, tipo, rfc, correo, password }) {
+
+  const nombreInstLimpio = (nombreInstitucion || '').trim();
+  const tipoLimpio = (tipo || '').trim();
+  const rfcLimpio = (rfc || '').trim().toUpperCase();
+  const correoLimpio = correo.trim().toLowerCase();
+
   if (nombreInstLimpio.length < 3) {
     throw new Error('Ingresa el nombre de la institución (mínimo 3 caracteres).');
   }
 
-  if (instituciones[correoKey]) {
-    throw new Error('Ya existe una cuenta institucional con ese correo.');
-  }
-
-  // ✅ Evita cuentas cruzadas: un correo ya registrado como ciudadano
-  // no puede volver a registrarse como institución.
-  const usuarios = JSON.parse(localStorage.getItem('jo_usuarios') || '{}');
-  if (usuarios[correoKey]) {
-    throw new Error('Ese correo ya está registrado como cuenta ciudadana.');
-  }
-
-  // ✅ FIX: se compara contra la versión ya recortada (tipoLimpio), para
-  // que un espacio accidental al inicio/final del <select> no rompa
-  // la validación aunque el valor "se vea" correcto.
   if (!TIPOS_INSTITUCION.includes(tipoLimpio)) {
     throw new Error('Selecciona un tipo de institución válido.');
   }
-  if (matriculaLimpia.length < 3) {
-    throw new Error('Ingresa una matrícula o número de empleado válido.');
-  }
 
-  // ✅ FIX: comparación de matrícula insensible a mayúsculas/minúsculas,
-  // para que "EMP-2451" y "emp-2451" cuenten como la misma matrícula.
-  const yaExiste = Object.values(instituciones).some(
-    i => (i.matricula || '').trim().toLowerCase() === matriculaComparar
-  );
-  if (yaExiste) {
-    throw new Error('Ya existe una cuenta registrada con esa matrícula.');
+  if (rfcLimpio.length < 3) {
+    throw new Error('Ingresa un RFC válido.');
   }
 
   const passwordHash = await hashPassword(password);
-  instituciones[correoKey] = {
-    nombreInstitucion: nombreInstLimpio,
-    tipo: tipoLimpio,
-    matricula: matriculaLimpia,
-    correo: correoKey,
-    passwordHash
-  };
-  _guardarInstituciones(instituciones);
-  return instituciones[correoKey];
+
+  const respuesta = await fetch(`${API_BASE}/instituciones/registro`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      nombreInstitucion: nombreInstLimpio,
+      tipo: tipoLimpio,
+      rfc: rfcLimpio,
+      correo: correoLimpio,
+      passwordHash
+    })
+  });
+
+  const datos = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(datos.mensaje);
+  }
+
+  return datos;
 }
 
 async function verificarCredencialesInstitucion(correo, password) {
-  const instituciones = _obtenerInstituciones();
-  const correoKey = correo.trim().toLowerCase();
-  const institucion = instituciones[correoKey];
-
-  if (!institucion) return null;
 
   const passwordHash = await hashPassword(password);
-  if (passwordHash !== institucion.passwordHash) return null;
 
-  return institucion;
+  const respuesta = await fetch(`${API_BASE}/instituciones/login`, {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      correo: correo.trim().toLowerCase(),
+      passwordHash
+    })
+
+  });
+
+
+  if (!respuesta.ok) {
+    return null;
+  }
+
+
+  const datos = await respuesta.json();
+
+  return datos.institucion;
+
 }
 
 // ══════════════════════════════════════════════════════════════
-// SESIÓN DE INSTITUCIÓN (separada de la sesión de ciudadano)
+// SESIÓN DE INSTITUCIÓN (localStorage está bien aquí — es sesión
+// del cliente, no datos de reportes)
 // ══════════════════════════════════════════════════════════════
 function crearSesionInstitucion(institucion) {
   const sesion = {
     correo: institucion.correo,
-    nombre: institucion.nombreInstitucion,
+    nombreInstitucion: institucion.nombre,
     tipo: institucion.tipo,
     rol: 'institucion',
     expira: Date.now() + (8 * 60 * 60 * 1000)
@@ -143,95 +163,131 @@ function cerrarSesionInstitucion(redirectUrl = 'institucion_login.html') {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ALMACÉN DE REPORTES
-// Estructura de un reporte:
-// {
-//   id, categoria, descripcion, direccion, lat, lng,
-//   fotos: [dataURL, ...],
-//   estado: 'Pendiente' | 'En proceso' | 'Resuelto',
-//   institucionAsignada: uno de TIPOS_INSTITUCION,
-//   observaciones: [{ texto, autor, fecha }],
-//   ciudadanoCorreo, fechaCreacion, fechaActualizacion
-// }
+// REPORTES — contra la API real (mismo origen de datos que
+// ciudadano.js), en vez de localStorage.
 // ══════════════════════════════════════════════════════════════
-function _obtenerReportes() {
-  try { return JSON.parse(localStorage.getItem('jo_reportes')) || []; }
-  catch { return []; }
+
+async function _fetchTodosLosReportes() {
+  const respuesta = await fetch(`${API_BASE}/reportes`);
+  if (!respuesta.ok) {
+    throw new Error('No se pudieron cargar los reportes del servidor.');
+  }
+  return await respuesta.json();
 }
 
-function _guardarReportes(reportes) {
-  localStorage.setItem('jo_reportes', JSON.stringify(reportes));
+function _mapearReporte(r) {
+  return {
+    id: r._id,
+    categoria: r.tipo,
+    descripcion: r.descripcion,
+    direccion: r.direccion,
+    lat: r.latitud,
+    lng: r.longitud,
+    foto: r.foto || '',
+    estado: r.estado,
+    institucionAsignada: institucionDeReporte(r),
+    // Bitácora de avances: cada entrada puede traer texto, foto, o ambos
+    bitacora: (r.bitacora || []).map(b => ({
+      texto: b.texto || '',
+      foto: b.foto || '',
+      autor: b.autor || 'Institución',
+      fecha: new Date(b.fecha).getTime(),
+    })),
+    ciudadanoCorreo: r.ciudadano ? r.ciudadano.correo : null,
+    ciudadanoNombre: r.ciudadano ? r.ciudadano.nombre : null,
+    fechaCreacion: new Date(r.createdAt).getTime(),
+    fechaActualizacion: new Date(r.updatedAt || r.createdAt).getTime(),
+  };
 }
 
-function obtenerReportesPorInstitucion(tipo) {
-  return _obtenerReportes()
-    .filter(r => r.institucionAsignada === tipo)
+async function obtenerReportesPorInstitucion(tipo) {
+  const reportes = await _fetchTodosLosReportes();
+
+  return reportes
+    .filter(r => institucionDeReporte(r) === tipo)
+    .map(_mapearReporte)
     .sort((a, b) => b.fechaCreacion - a.fechaCreacion);
 }
 
-function obtenerReportePorId(id) {
-  return _obtenerReportes().find(r => r.id === id) || null;
+async function obtenerReportePorId(id) {
+  // Nota: trae todos los reportes y filtra en el cliente porque no hay
+  // GET /api/reportes/:id dedicado. Si el volumen de reportes crece
+  // mucho, conviene agregar esa ruta en el backend.
+  const reportes = await _fetchTodosLosReportes();
+  const r = reportes.find(x => x._id === id);
+  return r ? _mapearReporte(r) : null;
 }
 
-function cambiarEstadoReporte(id, nuevoEstado) {
+async function cambiarEstadoReporte(id, nuevoEstado) {
   if (!ESTADOS_REPORTE.includes(nuevoEstado)) {
     throw new Error('Estado de reporte no válido.');
   }
-  const reportes = _obtenerReportes();
-  const reporte = reportes.find(r => r.id === id);
-  if (!reporte) throw new Error('Reporte no encontrado.');
 
-  reporte.estado = nuevoEstado;
-  reporte.fechaActualizacion = Date.now();
-  _guardarReportes(reportes);
-  return reporte;
-}
+  const respuesta = await fetch(`${API_BASE}/reportes/${id}/estado`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      estado: nuevoEstado,
+      progreso: PROGRESO_POR_ESTADO[nuevoEstado],
+    }),
+  });
 
-function agregarObservacion(id, texto, autor = 'Institución') {
-  const reportes = _obtenerReportes();
-  const reporte = reportes.find(r => r.id === id);
-  if (!reporte) throw new Error('Reporte no encontrado.');
+  const datos = await respuesta.json();
 
-  reporte.observaciones = reporte.observaciones || [];
-  reporte.observaciones.push({ texto, autor, fecha: Date.now() });
-  reporte.fechaActualizacion = Date.now();
-  _guardarReportes(reportes);
-  return reporte;
-}
+  if (!respuesta.ok) {
+    throw new Error(datos.mensaje || 'No se pudo actualizar el estado del reporte.');
+  }
 
-function agregarFotoEvidencia(id, dataUrl) {
-  const reportes = _obtenerReportes();
-  const reporte = reportes.find(r => r.id === id);
-  if (!reporte) throw new Error('Reporte no encontrado.');
-
-  reporte.fotos = reporte.fotos || [];
-  reporte.fotos.push(dataUrl);
-  reporte.fechaActualizacion = Date.now();
-  _guardarReportes(reportes);
-  return reporte;
+  return datos.reporte;
 }
 
 function marcarResuelto(id) {
-  return cambiarEstadoReporte(id, 'Resuelto');
+  return cambiarEstadoReporte(id, 'resuelto');
 }
 
-function obtenerHistorialInstitucion(tipo) {
-  return obtenerReportesPorInstitucion(tipo)
-    .filter(r => r.estado === 'Resuelto');
+// ══════════════════════════════════════════════════════════════
+// BITÁCORA DE AVANCES — texto y/o foto de evidencia.
+// Esto es lo que le da transparencia al ciudadano: institución deja
+// constancia de qué hizo y cuándo, con foto si aplica, en vez de
+// solo cambiar el estado sin sustento.
+// ══════════════════════════════════════════════════════════════
+async function agregarAvance(id, { texto = '', foto = '' } = {}, autor = 'Institución') {
+  if (!texto && !foto) {
+    throw new Error('Agrega un texto o una foto de evidencia.');
+  }
+
+  const respuesta = await fetch(`${API_BASE}/reportes/${id}/bitacora`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ texto, foto, autor }),
+  });
+
+  const datos = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(datos.mensaje || 'No se pudo registrar el avance.');
+  }
+
+  return datos.reporte;
+}
+
+async function obtenerHistorialInstitucion(tipo) {
+  const reportes = await obtenerReportesPorInstitucion(tipo);
+  return reportes.filter(r => r.estado === 'resuelto');
 }
 
 // ══════════════════════════════════════════════════════════════
 // MÉTRICAS DE DESEMPEÑO
 // ══════════════════════════════════════════════════════════════
-function calcularMetricas(tipo) {
-  const reportes = obtenerReportesPorInstitucion(tipo);
+async function calcularMetricas(tipo) {
+  const reportes = await obtenerReportesPorInstitucion(tipo);
   const total      = reportes.length;
-  const pendientes = reportes.filter(r => r.estado === 'Pendiente').length;
-  const enProceso  = reportes.filter(r => r.estado === 'En proceso').length;
-  const resueltos  = reportes.filter(r => r.estado === 'Resuelto').length;
+  const pendientes = reportes.filter(r => r.estado === 'pendiente').length;
+  const enProceso  = reportes.filter(r => r.estado === 'revision').length;
+  const resueltos  = reportes.filter(r => r.estado === 'resuelto').length;
 
   const tiemposResolucion = reportes
-    .filter(r => r.estado === 'Resuelto')
+    .filter(r => r.estado === 'resuelto')
     .map(r => r.fechaActualizacion - r.fechaCreacion);
 
   const promedioMs = tiemposResolucion.length
@@ -241,48 +297,4 @@ function calcularMetricas(tipo) {
   const promedioHoras = (promedioMs / (1000 * 60 * 60)).toFixed(1);
 
   return { total, pendientes, enProceso, resueltos, promedioHoras };
-}
-
-// ══════════════════════════════════════════════════════════════
-// DATOS DE PRUEBA — ⚠️ SOLO PARA DESARROLLO
-// Genera reportes ficticios para poder probar el dashboard antes
-// de tener el flujo real de creación de reportes por ciudadanos.
-// Bórralo cuando ese flujo esté listo.
-// ══════════════════════════════════════════════════════════════
-function _sembrarReportesDemo(tipo) {
-  const categorias = {
-    'Policía Municipal': ['Robo a transeúnte', 'Riña vecinal', 'Vehículo abandonado'],
-    'Bomberos': ['Conato de incendio', 'Fuga de gas', 'Poste caído'],
-    'Protección Civil': ['Árbol a punto de caer', 'Inundación en calle', 'Cableado expuesto'],
-    'Obras Públicas': ['Bache profundo', 'Banqueta rota', 'Coladera sin tapa'],
-    'Alumbrado Público': ['Luminaria apagada', 'Poste dañado', 'Cableado suelto'],
-    'Servicios de Limpia': ['Basura acumulada', 'Tiradero clandestino', 'Contenedor dañado'],
-    'Tránsito Municipal': ['Semáforo descompuesto', 'Señalamiento dañado', 'Bache en cruce'],
-    'Ecología': ['Tala no autorizada', 'Contaminación de canal', 'Quema a cielo abierto'],
-    'Parques y Jardines': ['Juego infantil roto', 'Pasto sin mantenimiento', 'Árbol caído']
-  };
-
-  const lista = categorias[tipo] || ['Reporte general'];
-  const reportes = _obtenerReportes();
-
-  lista.forEach((categoria, i) => {
-    const creado = Date.now() - (i + 1) * 3 * 60 * 60 * 1000;
-    reportes.push({
-      id: 'demo_' + tipo.replace(/\s/g, '') + '_' + Date.now() + '_' + i,
-      categoria,
-      descripcion: `Reporte de prueba: ${categoria.toLowerCase()} reportado por un vecino de la zona.`,
-      direccion: 'Col. Centro, Cd. Juárez, Chih.',
-      lat: 31.6904 + (Math.random() - 0.5) * 0.05,
-      lng: -106.4245 + (Math.random() - 0.5) * 0.05,
-      fotos: [],
-      estado: i === 0 ? 'Resuelto' : (i === 1 ? 'En proceso' : 'Pendiente'),
-      institucionAsignada: tipo,
-      observaciones: [],
-      ciudadanoCorreo: 'vecino.demo@correo.com',
-      fechaCreacion: creado,
-      fechaActualizacion: i === 0 ? creado + 2 * 60 * 60 * 1000 : creado
-    });
-  });
-
-  _guardarReportes(reportes);
 }

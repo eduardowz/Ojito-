@@ -88,17 +88,17 @@
           <span class="field-error"></span>
         </div>
 
-        <div class="field" id="campoMatricula">
-          <label for="matricula">Matrícula o número de empleado</label>
-          <input class="input" type="text" id="matricula" name="matricula"
-                 placeholder="Ej. EMP-2451" autocomplete="off" required minlength="3">
+        <div class="field" id="campoRFC">
+          <label for="rfc">RFC de la institución</label>
+          <input class="input" type="text" id="rfc" name="rfc"
+                placeholder="Ej. JOC850101ABC" autocomplete="off" required minlength="3">
           <span class="field-error"></span>
         </div>
 
         <div class="field" id="campoCorreo">
           <label for="correo">Correo institucional</label>
           <input class="input" type="email" id="correo" name="correo"
-                 placeholder="tu.nombre@institucion.gob.mx" autocomplete="email" required>
+                placeholder="tu.nombre@institucion.gob.mx" autocomplete="email" required>
           <span class="field-error"></span>
         </div>
 
@@ -285,13 +285,13 @@
   // VALIDACIÓN Y SUBMIT
   // ✅ FIX: usa registrarInstitucion() tal cual está definida en
   // institucion.js — mismos nombres de campos (nombreInstitucion,
-  // tipo, matricula, correo, password), sin inventar otra función.
+  // tipo, rfc, correo, password), sin inventar otra función.
   // ══════════════════════════════════════════════════════════════
   async function handleRegistroInst() {
     const alerta          = document.getElementById('registroInstAlert');
     const nombreInst      = document.getElementById('nombreInstitucion');
     const tipo            = document.getElementById('tipo');
-    const matricula       = document.getElementById('matricula');
+    const rfc             = document.getElementById('rfc');
     const correo          = document.getElementById('correo');
     const password        = document.getElementById('password');
     const confirmacion    = document.getElementById('confirmacion');
@@ -315,12 +315,12 @@
       limpiarError(document.getElementById('campoTipo'));
     }
 
-    // ── Matrícula ─────────────────────────────────────────────
-    if (matricula.value.trim().length < 3) {
-      mostrarError(document.getElementById('campoMatricula'), 'Ingresa una matrícula o número de empleado válido.');
+    // ── RFC ─────────────────────────────────────────────
+    if (rfc.value.trim().length < 3) {
+      mostrarError(document.getElementById('campoRFC'), 'Ingresa un RFC válido.');
       valido = false;
     } else {
-      limpiarError(document.getElementById('campoMatricula'));
+      limpiarError(document.getElementById('campoRFC'));
     }
 
     // ── Correo ────────────────────────────────────────────────
@@ -379,7 +379,7 @@
       await registrarInstitucion({
         nombreInstitucion: nombreInst.value.trim(),
         tipo: tipo.value,
-        matricula: matricula.value.trim(),
+        rfc: rfc.value.trim().toUpperCase(),
         correo: correo.value.trim(),
         password: password.value
       });

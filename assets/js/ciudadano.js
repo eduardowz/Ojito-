@@ -1,8 +1,9 @@
 // ══════════════════════════════════════════════════════════════
 // JUÁREZ OBSERVA · ciudadano.js
-// Lógica exclusiva de ciudadano.html — ahora con mapa real
-// (Leaflet + OpenStreetMap), geolocalización y selector de
-// ubicación para nuevos reportes.
+// Lógica exclusiva de ciudadano.html — mapa real (Leaflet +
+// OpenStreetMap), geolocalización, selector de ubicación para
+// nuevos reportes y notificaciones reales generadas a partir de
+// los reportes y el historial del usuario.
 //
 // Depende de utilidades definidas en app.js:
 //   requireSesion(), obtenerSesion(), cerrarSesion(), inicialesDeNombre()
@@ -42,13 +43,8 @@ const STATUS_MAP = {
 };
 
 // Coordenadas reales aproximadas dentro de Ciudad Juárez para cada reporte demo
-let reportes = [
-  { id: 101, type: 'bache',     title: 'Bache en Av. Tecnológico',  addr: 'Av. Tecnológico, Col. Partido Romero', time: 'Hace 2 h',   status: 'pendiente', progress: 10,  inst: null,                lat: 31.6852, lng: -106.4010, mine: true },
-  { id: 102, type: 'alumbrado', title: 'Alumbrado dañado Plutarco', addr: 'Calle Plutarco Elías Calles, Col. Independencia', time: 'Ayer', status: 'revision', progress: 60, inst: 'Alumbrado / JMAS', lat: 31.7105, lng: -106.4495, mine: true },
-  { id: 103, type: 'basura',    title: 'Acumulación de basura',     addr: 'Col. Fronteriza',                      time: 'Hace 3 días', status: 'resuelto',  progress: 100, inst: 'Obras Públicas',    lat: 31.6735, lng: -106.4685, mine: false },
-  { id: 104, type: 'seguridad', title: 'Situación sospechosa',      addr: 'Col. Aeropuerto',                      time: 'Hace 3 h',    status: 'resuelto',  progress: 100, inst: 'Policía Municipal', lat: 31.6361, lng: -106.4275, mine: false },
-  { id: 105, type: 'bache',     title: 'Bache frente a escuela',    addr: 'Col. Altavista',                       time: 'Hace 5 h',    status: 'pendiente', progress: 0,   inst: null,                lat: 31.7245, lng: -106.4870, mine: true },
-];
+let reportes = [];
+let historialUsuario = []; // eventos guardados en MongoDB (ej. eliminaciones)
 
 let filtroActual = 'todos';
 let map;                 // mapa principal (Leaflet)
@@ -59,20 +55,150 @@ let pickerLatLng = null; // última posición elegida en el picker
 
 const $ = (id) => document.getElementById(id);
 
+async function cargarReportes() {
+
+  try {
+
+    const sesion = obtenerSesion();
+
+    const respuesta = await fetch("http://localhost:3000/api/reportes");
+
+    const datos = await respuesta.json();
+
+    reportes = datos.map(r => ({
+
+      id: r._id,
+
+      type: r.tipo,
+
+      title: `${TIPOS[r.tipo].label} · ${r.direccion}`,
+
+      addr: r.direccion || "Sin dirección",
+      descripcion: r.descripcion,
+
+      time: tiempoTranscurrido(r.createdAt),
+      fecha: r.createdAt,
+
+      status: r.estado,
+
+      progress: r.progreso,
+
+      inst: r.institucion || null,
+
+      lat: r.latitud,
+
+      lng: r.longitud,
+
+      mine: sesion && r.ciudadano.correo === sesion.correo
+
+    }));
+
+    renderPins();
+    renderReportList();
+    renderMisReportes();
+    renderPerfilStats();
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+}
+
+// ══════════════════════════════════════════════════════════════
+// HISTORIAL DE ACTIVIDAD — persistido en MongoDB (Usuario.historial)
+// ══════════════════════════════════════════════════════════════
+async function cargarHistorialUsuario() {
+
+  const sesion = obtenerSesion();
+  if (!sesion) return;
+
+  try {
+
+    const respuesta = await fetch(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`);
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(datos.mensaje || 'No se pudo cargar el historial.');
+    }
+
+    historialUsuario = datos.historial || [];
+
+  } catch (error) {
+    console.error(error);
+    historialUsuario = [];
+  }
+}
+
+async function guardarEventoHistorial(mensaje) {
+
+  const sesion = obtenerSesion();
+  if (!sesion) return;
+
+  try {
+
+    const respuesta = await fetch(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ mensaje })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(datos.mensaje || 'No se pudo guardar el evento.');
+    }
+
+    historialUsuario = datos.historial || historialUsuario;
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function tiempoTranscurrido(fecha) {
+
+  const ahora = new Date();
+
+  const creado = new Date(fecha);
+
+  const segundos = Math.floor((ahora - creado) / 1000);
+
+  if (segundos < 60) return "Hace unos segundos";
+
+  const minutos = Math.floor(segundos / 60);
+
+  if (minutos < 60)
+    return `Hace ${minutos} min`;
+
+  const horas = Math.floor(minutos / 60);
+
+  if (horas < 24)
+    return `Hace ${horas} h`;
+
+  const dias = Math.floor(horas / 24);
+
+  return `Hace ${dias} día${dias > 1 ? "s" : ""}`;
+
+}
+
 // ══════════════════════════════════════════════════════════════
 // INIT — exige sesión vigente antes de mostrar nada
 // ══════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const sesion = requireSesion('login.html');
   if (!sesion) return; // requireSesion ya redirigió
 
   aplicarSesionEnUI(sesion);
 
   initMapaPrincipal();
-  renderReportList();
-  renderMisReportes();
-  renderPerfilStats();
+  await cargarReportes();
+  await cargarHistorialUsuario();
   renderHistorial();
+  renderNotificaciones();
 
   initNav();
   initNotif();
@@ -81,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initModalDetalle();
   initPerfil();
   initLocate();
+  initAutocompleDireccion();
 
   // Filtro mis reportes — unificado aquí para evitar doble DOMContentLoaded
   const filtro = $('filtroMisReportes');
@@ -141,7 +268,7 @@ function renderPins() {
     marker.bindPopup(`
       <div class="jo-popup__title">${r.title}</div>
       <div class="jo-popup__meta">${r.time} · ${r.addr}</div>
-      <button class="jo-popup__btn" onclick="abrirDetalle(${r.id})">Ver detalle</button>
+      <button class="jo-popup__btn" onclick="abrirDetalle('${r.id}')">Ver detalle</button>
     `);
 
     markersLayer[r.id] = marker;
@@ -212,8 +339,101 @@ function irASeccion(btnId, sectionId) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// NOTIFICACIONES
+// NOTIFICACIONES — generadas desde reportes reales + historial
+// (guardan cuáles ya se leyeron en localStorage, por usuario)
 // ══════════════════════════════════════════════════════════════
+
+function claveNotifLeidas() {
+  const sesion = obtenerSesion();
+  return sesion ? `jo_notif_leidas_${sesion.correo}` : 'jo_notif_leidas';
+}
+
+function obtenerNotifLeidas() {
+  try {
+    return JSON.parse(localStorage.getItem(claveNotifLeidas())) || [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarNotifLeidas(ids) {
+  localStorage.setItem(claveNotifLeidas(), JSON.stringify(ids));
+}
+
+function generarNotificaciones() {
+  const mias = reportes.filter(r => r.mine);
+  const notifs = [];
+
+  mias.forEach(r => {
+    if (r.status === 'revision') {
+      notifs.push({
+        id: `rep-${r.id}-revision`,
+        msg: `Tu reporte de ${TIPOS[r.type].label} fue asignado${r.inst ? ' a ' + r.inst : ' a revisión'}.`,
+        fecha: r.fecha,
+      });
+    } else if (r.status === 'resuelto') {
+      notifs.push({
+        id: `rep-${r.id}-resuelto`,
+        msg: `Tu reporte de ${TIPOS[r.type].label} fue marcado como resuelto.`,
+        fecha: r.fecha,
+      });
+    }
+  });
+
+  (historialUsuario || []).forEach((h, i) => {
+    notifs.push({
+      id: `hist-${i}-${h.fecha}`,
+      msg: h.mensaje,
+      fecha: h.fecha,
+    });
+  });
+
+  return notifs
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .slice(0, 10);
+}
+
+function renderNotificaciones() {
+  const panel = $('notifPanel');
+  const notifs = generarNotificaciones();
+  const leidas = obtenerNotifLeidas();
+  const noLeidas = notifs.filter(n => !leidas.includes(n.id));
+
+  // Limpia solo los items dinámicos (deja el encabezado y el botón de "limpiar")
+  panel.querySelectorAll('.jo-notif-dynamic').forEach(el => el.remove());
+
+  const referencia = $('btnClearNotif');
+
+  if (!notifs.length) {
+    const vacio = document.createElement('div');
+    vacio.className = 'jo-notif-dynamic';
+    vacio.style.cssText = 'padding:1.2rem;text-align:center;color:var(--jo-muted);font-size:13px;';
+    vacio.textContent = 'No tienes notificaciones por ahora.';
+    panel.insertBefore(vacio, referencia);
+  } else {
+    notifs.forEach(n => {
+      const esNoLeida = !leidas.includes(n.id);
+      const item = document.createElement('div');
+      item.className = `jo-notifitem jo-notif-dynamic${esNoLeida ? ' is-unread' : ''}`;
+      item.innerHTML = `
+        ${esNoLeida ? '<span class="jo-notifdot"></span>' : ''}
+        <div>
+          <p>${n.msg}</p>
+          <span>${tiempoTranscurrido(n.fecha)}</span>
+        </div>`;
+      panel.insertBefore(item, referencia);
+    });
+  }
+
+  const badge = $('notifCount');
+  if (noLeidas.length) {
+    badge.textContent = noLeidas.length > 9 ? '9+' : noLeidas.length;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 function initNotif() {
   $('btnNotif').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -226,11 +446,9 @@ function initNotif() {
     if (!e.target.closest('#notifPanel') && !e.target.closest('#btnNotif')) cerrarNotif();
   });
   $('btnClearNotif').addEventListener('click', () => {
-    $('notifCount').style.display = 'none';
-    document.querySelectorAll('.jo-notifitem.is-unread').forEach(i => {
-      i.classList.remove('is-unread');
-      i.querySelector('.jo-notifdot')?.remove();
-    });
+    const notifs = generarNotificaciones();
+    guardarNotifLeidas(notifs.map(n => n.id));
+    renderNotificaciones();
   });
 }
 
@@ -265,7 +483,7 @@ function initFiltros() {
 function renderReportList(ordenarRecientes = false) {
   const el = $('reportList');
   let lista = filtroActual === 'todos' ? reportes : reportes.filter(r => r.type === filtroActual);
-  if (ordenarRecientes) lista = [...lista].sort((a, b) => b.id - a.id);
+  if (ordenarRecientes) lista = [...lista].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
   if (!lista.length) {
     el.innerHTML = `<p style="padding:1rem;text-align:center;font-size:13px;color:var(--jo-muted);">Sin reportes en esta categoría.</p>`;
@@ -290,7 +508,7 @@ function renderReportList(ordenarRecientes = false) {
 
   el.querySelectorAll('.jo-rcard').forEach(card => {
     card.addEventListener('click', () => {
-      const id = Number(card.dataset.id);
+      const id = card.dataset.id;
       centrarEnReporte(id);
       abrirDetalle(id);
     });
@@ -329,7 +547,7 @@ function renderMisReportes(filtroEstado = 'todos') {
 
   el.querySelectorAll('.jo-myrcard').forEach(card => {
     card.addEventListener('click', () => {
-      const id = Number(card.dataset.id);
+      const id = card.dataset.id;
       abrirDetalle(id);
     });
   });
@@ -346,12 +564,33 @@ function renderPerfilStats() {
 }
 
 function renderHistorial() {
-  const historial = [
-    { msg: 'Enviaste el reporte #105 · Bache frente a escuela', time: 'Hace 5 h' },
-    { msg: 'Reporte #102 asignado a Alumbrado / JMAS',          time: 'Ayer' },
-    { msg: 'Reporte #101 en revisión por Obras Públicas',        time: 'Hace 3 días' },
-    { msg: 'Creaste tu cuenta',                                  time: '10 jun' },
-  ];
+  const mias = reportes.filter(r => r.mine);
+
+  // Eventos derivados de los reportes actuales del usuario
+  const eventosReportes = mias.map(r => {
+    let msg = `Enviaste el reporte · ${TIPOS[r.type].label}`;
+    if (r.status === 'resuelto') msg = `Tu reporte de ${TIPOS[r.type].label} fue marcado como resuelto`;
+    else if (r.status === 'revision') msg = `Tu reporte de ${TIPOS[r.type].label} está en revisión`;
+    return { msg, fecha: r.fecha || new Date(0) };
+  });
+
+  // Eventos guardados en MongoDB (ej. "Eliminaste el reporte #X")
+  const eventosGuardados = (historialUsuario || []).map(h => ({
+    msg: h.mensaje,
+    fecha: h.fecha
+  }));
+
+  // Combinamos ambas fuentes y ordenamos por fecha, más reciente primero
+  const historial = [...eventosReportes, ...eventosGuardados]
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .slice(0, 6)
+    .map(h => ({ msg: h.msg, time: tiempoTranscurrido(h.fecha) }));
+
+  if (!historial.length) {
+    $('perfilHistory').innerHTML = `<p style="text-align:center;padding:1rem;color:var(--jo-muted);font-size:13px;">Aún no tienes actividad registrada.</p>`;
+    return;
+  }
+
   $('perfilHistory').innerHTML = historial.map(h => `
     <div class="jo-history__item">
       <svg viewBox="0 0 14 14" fill="none" width="13" height="13" style="color:var(--jo-muted);flex-shrink:0;"><rect x="2" y="1" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7h6M4 9h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
@@ -373,7 +612,7 @@ function initPerfil() {
     $('perfilAlert').className = 'alert';
   });
 
-  $('formEditarPerfil').addEventListener('submit', (e) => {
+  $('formEditarPerfil').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const nombre = $('editNombre').value.trim();
@@ -407,16 +646,55 @@ function initPerfil() {
       return;
     }
 
+
     const sesion = obtenerSesion();
-    if (sesion) {
-      sesion.nombre = nombre;
-      sesion.correo = correo;
-      localStorage.setItem('jo_sesion', JSON.stringify(sesion));
+    try {
+
+      let passwordHash = "";
+
+      if ($('editPassword').value.trim() !== "") {
+        passwordHash = await hashPassword($('editPassword').value.trim());
+      }
+
+      const respuesta = await fetch(`http://localhost:3000/api/usuarios/${sesion.correo}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          nombre,
+          correo,
+          telefono: sesion.telefono,
+          passwordHash
+        })
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.mensaje);
+      }
+
+      // Actualizar la sesión local
+      sesion.nombre = datos.usuario.nombre;
+      sesion.correo = datos.usuario.correo;
+
+      localStorage.setItem("jo_sesion", JSON.stringify(sesion));
+
       aplicarSesionEnUI(sesion);
+
+      mostrarAlerta($('perfilAlert'), '✅ Perfil actualizado correctamente.', 'success');
+
+      $('editPassword').value = "";
+
+    } catch (error) {
+
+      mostrarAlerta($('perfilAlert'), error.message, 'error');
+
+      return;
+
     }
 
-    mostrarAlerta($('perfilAlert'), '✅ Perfil actualizado correctamente.', 'success');
-    $('editPassword').value = '';
     setTimeout(() => {
       $('formEditarPerfil').hidden = true;
       $('btnEditarPerfil').hidden = false;
@@ -475,7 +753,14 @@ function abrirModalReporte() {
   const centroInicial = map ? map.getCenter() : L.latLng(CDJ_CENTER[0], CDJ_CENTER[1]);
   pickerLatLng = centroInicial;
 
-  setTimeout(() => {
+  montarPickerMap(centroInicial);
+}
+
+// Monta (o reutiliza) el mini-mapa del picker de forma robusta: reintenta el
+// invalidateSize varias veces mientras el modal termina su animación de
+// entrada, para que Leaflet nunca calcule un tamaño 0x0 y se quede en blanco.
+function montarPickerMap(centroInicial) {
+  const construir = () => {
     if (!pickerMap) {
       pickerMap = L.map('pickerMap', {
         center: centroInicial,
@@ -502,9 +787,21 @@ function abrirModalReporte() {
       pickerMap.setView(centroInicial, 15);
       pickerMarker.setLatLng(centroInicial);
     }
-    pickerMap.invalidateSize();
+
+    // Reintenta el recálculo de tamaño en varios frames: el modal todavía
+    // puede estar en mitad de su animación de entrada (jo-modal-in) cuando
+    // Leaflet mide el contenedor, lo que antes dejaba el mapa en blanco.
+    [50, 150, 350].forEach(ms => {
+      setTimeout(() => {
+        if (pickerMap) pickerMap.invalidateSize();
+      }, ms);
+    });
+
     actualizarCoordsTexto();
-  }, 60);
+  };
+
+  // Espera un frame para asegurar que el contenedor ya tiene dimensiones
+  requestAnimationFrame(() => requestAnimationFrame(construir));
 }
 
 function actualizarCoordsTexto() {
@@ -525,7 +822,7 @@ function cerrarModalReporte() {
   $('reporteAlert').className = 'alert';
 }
 
-function enviarNuevoReporte() {
+async function enviarNuevoReporte() {
   const tipo = $('repTipo').value;
   const desc = $('repDesc').value.trim();
   let valido = true;
@@ -553,38 +850,189 @@ function enviarNuevoReporte() {
   btn.disabled = true;
   btn.textContent = 'Enviando…';
 
-  setTimeout(() => {
+  try {
+
+    const sesion = obtenerSesion();
+
     const addr = $('repAddr').value.trim() || 'Dirección no especificada';
-    const nuevoId = Math.max(...reportes.map(r => r.id)) + 1;
 
     const lat = pickerLatLng ? pickerLatLng.lat : CDJ_CENTER[0];
     const lng = pickerLatLng ? pickerLatLng.lng : CDJ_CENTER[1];
 
-    reportes.unshift({
-      id: nuevoId, type: tipo,
-      title: `${TIPOS[tipo].label} · ${addr}`,
-      addr, time: 'Ahora', status: 'pendiente', progress: 0, inst: null,
-      lat, lng, mine: true,
+    const urgencia = document.querySelector('input[name="urgencia"]:checked')?.value || 'media';
+
+    const editando = $('formNuevoReporte').dataset.editando;
+
+
+    const url = editando
+      ? `http://localhost:3000/api/reportes/${editando}`
+      : 'http://localhost:3000/api/reportes';
+
+
+    const respuesta = await fetch(url, {
+
+      method: editando ? 'PUT' : 'POST',
+
+      headers: {
+        'Content-Type': 'application/json'
+      },
+
+      body: JSON.stringify({
+        correo: sesion.correo,
+        tipo,
+        descripcion: desc,
+        direccion: addr,
+        latitud: lat,
+        longitud: lng,
+        urgencia,
+        foto: ''
+      })
     });
 
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(datos.mensaje || 'No se pudo registrar el reporte.');
+    }
+
+    // Lo agregamos también a la interfaz local
+    await cargarReportes();
+
+    $('formNuevoReporte').dataset.editando = '';
+    $('btnEnviarReporte').textContent = 'Enviar reporte';
     cerrarModalReporte();
     renderPins();
     renderReportList();
     renderMisReportes();
     renderPerfilStats();
+    renderHistorial();
+    renderNotificaciones();
 
     if (map) map.flyTo([lat, lng], 16, { duration: 0.6 });
+
+    mostrarToast('✓ Reporte enviado correctamente');
+
+  } catch (error) {
+
+    console.error(error);
+
+    mostrarAlerta($('reporteAlert'), error.message, 'error');
+
+  } finally {
 
     btn.disabled = false;
     btn.textContent = 'Enviar reporte';
 
-    mostrarToast(`✓ Reporte #${nuevoId} enviado correctamente`);
+  }
+}
 
-    const badge = $('notifCount');
-    const actual = parseInt(badge.textContent, 10) || 0;
-    badge.textContent = actual + 1;
-    badge.style.display = 'flex';
-  }, 900);
+// ══════════════════════════════════════════════════════════════
+// AUTOCOMPLETADO DE DIRECCIÓN — Nominatim (OpenStreetMap)
+// ══════════════════════════════════════════════════════════════
+
+// Caja delimitadora aproximada de Ciudad Juárez (min_lon,max_lat,max_lon,min_lat)
+// Se usa solo como SESGO (sin "bounded=1"), nunca como filtro estricto —
+// muchas colonias de Juárez no están bien mapeadas y bounded=1 las descartaba
+// aunque el nombre existiera realmente.
+const CDJ_VIEWBOX = '-106.62,31.85,-106.25,31.55';
+
+let addrDebounceTimer = null;
+
+function initAutocompleDireccion() {
+  const input = $('repAddr');
+  const box = $('addrSuggestions');
+  if (!input || !box) return;
+
+  input.addEventListener('input', () => {
+    const texto = input.value.trim();
+    clearTimeout(addrDebounceTimer);
+
+    if (texto.length < 3) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+
+    box.innerHTML = `<div class="jo-suggestion-loading">Buscando…</div>`;
+    box.hidden = false;
+
+    addrDebounceTimer = setTimeout(() => buscarDirecciones(texto), 400);
+  });
+
+  // Cierra las sugerencias si haces clic fuera
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#campoDireccion')) {
+      box.hidden = true;
+    }
+  });
+}
+
+async function buscarDirecciones(texto) {
+  const box = $('addrSuggestions');
+
+  try {
+    // 1er intento: sesgado a Ciudad Juárez (más preciso si el nombre existe en OSM)
+    let resultados = await intentarBusquedaNominatim(texto, true);
+
+    // 2do intento (fallback): sin sesgo geográfico, solo filtrando por país.
+    // Cubre casos donde el resultado real quedó fuera del viewbox o la
+    // dirección normalizada por Nominatim no coincide exactamente.
+    if (!resultados.length) {
+      resultados = await intentarBusquedaNominatim(texto, false);
+    }
+
+    if (!resultados.length) {
+      box.innerHTML = `<div class="jo-suggestion-empty">Sin coincidencias en el mapa. Escribe la referencia manualmente y ajusta el punto abajo.</div>`;
+      box.hidden = false;
+      return;
+    }
+
+    box.innerHTML = resultados.map((r, i) => `
+      <div class="jo-suggestion-item" data-index="${i}">${r.display_name}</div>
+    `).join('');
+    box.hidden = false;
+
+    box.querySelectorAll('.jo-suggestion-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const r = resultados[item.dataset.index];
+        seleccionarDireccion(r);
+      });
+    });
+
+  } catch (error) {
+    console.error('Error de geocodificación:', error);
+    box.innerHTML = `<div class="jo-suggestion-empty">No se pudo buscar. Escribe la dirección manualmente.</div>`;
+  }
+}
+
+async function intentarBusquedaNominatim(texto, sesgadoAJuarez) {
+  const base = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=mx';
+
+  const url = sesgadoAJuarez
+    ? `${base}&viewbox=${CDJ_VIEWBOX}&q=${encodeURIComponent(texto + ', Ciudad Juárez, Chihuahua')}`
+    : `${base}&q=${encodeURIComponent(texto + ', Juárez, Chihuahua, México')}`;
+
+  const respuesta = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+  if (!respuesta.ok) return [];
+  return await respuesta.json();
+}
+
+function seleccionarDireccion(resultado) {
+  const lat = parseFloat(resultado.lat);
+  const lng = parseFloat(resultado.lon);
+
+  // Solo el nombre corto (calle/colonia) en vez del display_name completo
+  const nombreCorto = resultado.display_name.split(',').slice(0, 2).join(',').trim();
+  $('repAddr').value = nombreCorto;
+  $('addrSuggestions').hidden = true;
+
+  // Mueve el marcador del picker a la ubicación encontrada
+  pickerLatLng = L.latLng(lat, lng);
+  if (pickerMarker && pickerMap) {
+    pickerMarker.setLatLng(pickerLatLng);
+    pickerMap.setView(pickerLatLng, 16);
+  }
+  actualizarCoordsTexto();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -630,11 +1078,107 @@ function abrirDetalle(id) {
         <div style="width:${r.progress}%;height:100%;background:${st.color};border-radius:4px;"></div>
       </div>
       <div style="font-size:11px;color:var(--jo-muted);margin-top:5px;">${r.progress}% completado</div>
+
+      ${r.mine ? `
+      <button 
+        class="btn btn--primary"
+        style="margin-top:1rem;width:100%;"
+        onclick="editarReporte('${r.id}')">
+        Editar reporte
+      </button>
+    ` : ''}
+
+      ${r.mine && r.status === 'pendiente' ? `
+      <button 
+        class="btn btn--danger-outline"
+        style="margin-top:0.6rem;width:100%;"
+        onclick="eliminarReporte('${r.id}')">
+        Eliminar reporte
+      </button>
+      ` : ''}
+
     </div>`;
 
   $('detailOverlay').hidden = false;
   document.body.style.overflow = 'hidden';
 }
+
+function editarReporte(id) {
+
+  const r = reportes.find(x => x.id === id);
+
+  if (!r) {
+    mostrarToast("No se encontró el reporte");
+    return;
+  }
+
+  // cerrar ventana de detalle
+  cerrarModalDetalle();
+
+  // abrir formulario de reporte
+  $('modalOverlay').hidden = false;
+  document.body.style.overflow = 'hidden';
+
+
+  // cargar datos del reporte
+  $('repTipo').value = r.type;
+  $('repDesc').value = r.descripcion || '';
+  $('repAddr').value = r.addr;
+
+
+  // cargar ubicación
+  pickerLatLng = { lat: r.lat, lng: r.lng };
+
+  montarPickerMap(pickerLatLng);
+
+  // indicar que estamos editando
+  $('formNuevoReporte').dataset.editando = r.id;
+
+
+  // cambiar texto del botón
+  $('btnEnviarReporte').textContent = "Guardar cambios";
+}
+
+async function eliminarReporte(id) {
+
+  const confirmar = confirm("¿Seguro que quieres eliminar este reporte? Esta acción no se puede deshacer.");
+  if (!confirmar) return;
+
+  try {
+
+    const r = reportes.find(x => x.id === id);
+    const etiquetaTipo = r ? TIPOS[r.type].label : 'reporte';
+
+    const respuesta = await fetch(`http://localhost:3000/api/reportes/${id}`, {
+      method: "DELETE"
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(datos.mensaje || "No se pudo eliminar el reporte.");
+    }
+
+    // 👇 Guardamos el evento en MongoDB para que persista entre dispositivos
+    await guardarEventoHistorial(`Eliminaste tu reporte de ${etiquetaTipo}`);
+
+    cerrarModalDetalle();
+    await cargarReportes();
+    renderPins();
+    renderReportList();
+    renderMisReportes();
+    renderPerfilStats();
+    renderHistorial();
+    renderNotificaciones();
+
+    mostrarToast("✓ Reporte eliminado correctamente");
+
+  } catch (error) {
+    console.error(error);
+    mostrarToast(error.message);
+  }
+}
+
 
 function cerrarModalDetalle() {
   const overlay = $('detailOverlay');
