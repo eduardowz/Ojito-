@@ -11,7 +11,7 @@
   --jo-accent:    #993C1D;
   --jo-steel:     #185FA5;
   --jo-forest:    #0F6E56;
-  --jo-serif:     'Fraunces', Georgia, serif;
+  --jo-serif:     'Segoe UI', system-ui, sans-serif;
   --jo-body:      'Inter', system-ui, sans-serif;
   --jo-mono:      'IBM Plex Mono', ui-monospace, monospace;
   --jo-nav-h:     56px;
@@ -68,15 +68,8 @@
   margin-right: 4px;
   flex-shrink: 0;
 }
-.brand--nav .brand__mark {
-  width: 20px; height: 20px;
-  border-radius: 4px;
-  background: var(--jo-green);
-  transform: rotate(45deg);
-  flex-shrink: 0;
-}
-.brand--nav .brand__juarez  { color: var(--jo-text); font-family: var(--jo-serif); font-weight: 700; letter-spacing: -.01em; }
-.brand--nav .brand__observa { color: var(--jo-green); font-family: var(--jo-serif); font-weight: 700; letter-spacing: -.01em; }
+.brand--nav .brand__juarez  { color: var(--jo-text); font-family: 'Segoe UI', sans-serif;  font-weight: 700; letter-spacing: -.01em; }
+.brand--nav .brand__observa { color: var(--jo-green); font-family:'Segoe UI', sans-serif;  font-weight: 700; letter-spacing: -.01em; }
 
 .jo-nav__links {
   display: flex;
