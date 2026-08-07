@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 
 const Usuario = require("../models/Usuario");
-const Parametros = require("../models/parametros"); // ⚠️ ajusta el nombre/ruta si es distinto en tu proyecto
+const Parametros = require("../models/Parametros"); // ⚠️ ajusta el nombre/ruta si es distinto en tu proyecto
 const { enviarCodigoRecuperacion, enviarCodigoVerificacion } = require("../utils/mailer");
 const authCiudadano = require("../middleware/authCiudadano");
 
