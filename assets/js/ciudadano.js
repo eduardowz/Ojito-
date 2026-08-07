@@ -2,11 +2,13 @@
 const CDJ_CENTER = [31.6904, -106.4245];
 const CDJ_ZOOM = 13;
 
+const API_BASE = 'https://ojito-a9d2.onrender.com/api';
+
 let CATEGORIAS = {};
 
 async function cargarCategorias() {
   try {
-    const respuesta = await fetch("http://localhost:3000/api/categorias");
+    const respuesta = await fetch(`${API_BASE}/categorias`);
     const datos = await respuesta.json();
 
     const mapa = {};
@@ -100,7 +102,7 @@ async function cargarReportes() {
 
     const sesion = obtenerSesion();
 
-    const respuesta = await fetch("http://localhost:3000/api/reportes?incluirResueltos=true");
+    const respuesta = await fetch(`${API_BASE}/reportes?incluirResueltos=true`);
 
     const datos = await respuesta.json();
 
@@ -157,7 +159,7 @@ async function cargarHistorialUsuario() {
 
   try {
 
-    const respuesta = await fetchAutenticado(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`);
+    const respuesta = await fetchAutenticado(`${API_BASE}/usuarios/${sesion.correo}/historial`);
     const datos = await respuesta.json();
 
     if (!respuesta.ok) {
@@ -179,7 +181,7 @@ async function guardarEventoHistorial(mensaje) {
 
   try {
 
-    const respuesta = await fetchAutenticado(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`, {
+    const respuesta = await fetchAutenticado(`${API_BASE}/usuarios/${sesion.correo}/historial`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -702,7 +704,7 @@ function initPerfil() {
         passwordHash = await hashPassword($('editPassword').value.trim());
       }
 
-      const respuesta = await fetchAutenticado(`http://localhost:3000/api/usuarios/${sesion.correo}`, {
+      const respuesta = await fetchAutenticado(`${API_BASE}/usuarios/${sesion.correo}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -910,8 +912,8 @@ async function enviarNuevoReporte() {
     const editando = $('formNuevoReporte').dataset.editando;
 
     const url = editando
-      ? `http://localhost:3000/api/reportes/${editando}`
-      : 'http://localhost:3000/api/reportes';
+      ? `${API_BASE}/reportes/${editando}`
+      : `${API_BASE}/reportes`;
 
     const respuesta = await fetchAutenticado(url, {
 
@@ -1188,7 +1190,7 @@ async function eliminarReporte(id) {
     const r = reportes.find(x => x.id === id);
     const etiquetaTipo = r ? categoriaDe(r.type).label : 'reporte';
 
-    const respuesta = await fetchAutenticado(`http://localhost:3000/api/reportes/${id}`, {
+    const respuesta = await fetchAutenticado(`${API_BASE}/reportes/${id}`, {
       method: "DELETE"
     });
 

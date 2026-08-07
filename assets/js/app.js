@@ -3,6 +3,8 @@
 // Utilidades compartidas por todas las páginas
 // ══════════════════════════════════════════════════════════════
 
+const API_BASE = 'https://ojito-a9d2.onrender.com/api';
+
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ── Campos y alertas ─────────────────────────────────────────
@@ -126,7 +128,7 @@ async function registrarUsuario({ nombre, correo, telefono, password }) {
 
   const passwordHash = await hashPassword(password);
 
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/registro", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/registro`, {
 
     method: "POST",
 
@@ -157,7 +159,7 @@ async function verificarCredenciales(correo, password) {
 
   const passwordHash = await hashPassword(password);
 
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/login", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/login`, {
     method: "POST",
 
     headers: {
@@ -190,7 +192,7 @@ async function verificarCredenciales(correo, password) {
 // ══════════════════════════════════════════════════════════════
 
 async function solicitarRecuperacion(correo) {
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/solicitar-recuperacion", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/solicitar-recuperacion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: correo.trim().toLowerCase() })
@@ -202,7 +204,7 @@ async function solicitarRecuperacion(correo) {
 }
 
 async function verificarCodigoRecuperacion(correo, codigo) {
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/verificar-codigo", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/verificar-codigo`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo })
@@ -216,7 +218,7 @@ async function verificarCodigoRecuperacion(correo, codigo) {
 async function restablecerPassword(correo, codigo, password) {
   const passwordHash = await hashPassword(password);
 
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/restablecer-password", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/restablecer-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo, passwordHash })
@@ -232,7 +234,7 @@ async function restablecerPassword(correo, codigo, password) {
 // ══════════════════════════════════════════════════════════════
 
 async function verificarRegistro(correo, codigo) {
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/verificar-registro", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/verificar-registro`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo })
@@ -244,7 +246,7 @@ async function verificarRegistro(correo, codigo) {
 }
 
 async function reenviarVerificacionRegistro(correo) {
-  const respuesta = await fetch("http://localhost:3000/api/usuarios/reenviar-verificacion", {
+  const respuesta = await fetch(`${API_BASE}/usuarios/reenviar-verificacion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: correo.trim().toLowerCase() })
@@ -260,7 +262,7 @@ async function reenviarVerificacionRegistro(correo) {
 // ══════════════════════════════════════════════════════════════
 async function consultarParametros() {
   try {
-    const respuesta = await fetch("http://localhost:3000/api/parametros");
+    const respuesta = await fetch(`${API_BASE}/parametros`);
     if (!respuesta.ok) return null;
     return await respuesta.json();
   } catch {

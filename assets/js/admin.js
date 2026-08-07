@@ -1,7 +1,7 @@
 //correo: 'admin@juarezobserva.mx',
 //password: 'Admin#2026'
 
-const API_BASE_ADMIN = 'http://localhost:3000/api';
+const API_BASE_ADMIN = 'https://ojito-a9d2.onrender.com/api';
 
 const DURACION_SESION_ADMIN_MS = 8 * 60 * 60 * 1000; // 8 horas
 

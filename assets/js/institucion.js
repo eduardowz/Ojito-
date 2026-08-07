@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://ojito-a9d2.onrender.com/api';
 
 const TIPOS_INSTITUCION = [
   'Policía Municipal',
