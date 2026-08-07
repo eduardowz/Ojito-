@@ -54,13 +54,15 @@ router.post("/registro", async (req, res) => {
 
         await nuevoUsuario.save();
 
-        const enviado = await enviarCodigoVerificacion(nuevoUsuario.correo, codigo);
-
-        if (!enviado) {
-            return res.status(201).json({
-                mensaje: "Cuenta creada, pero no se pudo enviar el correo de verificación. Intenta reenviarlo más tarde."
-            });
-        }
+        // 👇 IMPORTANTE: no usamos "await" aquí. La cuenta ya se guardó
+        // en la base de datos, así que respondemos al usuario de inmediato
+        // en vez de dejarlo esperando a que Gmail conteste (que puede
+        // tardar mucho o colgarse en hosts como Render). El correo se
+        // envía "en segundo plano"; si falla, el usuario siempre puede
+        // pedir un reenvío desde la pantalla de verificación.
+        enviarCodigoVerificacion(nuevoUsuario.correo, codigo).catch((error) => {
+            console.log("Error al enviar correo de verificación (registro):", error);
+        });
 
         res.status(201).json({
             mensaje: "Cuenta creada. Revisa tu correo para verificar tu cuenta."
@@ -169,7 +171,11 @@ router.post("/reenviar-verificacion", async (req, res) => {
         usuario.codigoVerificacionExpira = new Date(Date.now() + 10 * 60 * 1000);
         await usuario.save();
 
-        await enviarCodigoVerificacion(usuario.correo, codigo);
+        // 👇 Mismo patrón que en /registro: no bloqueamos la respuesta
+        // esperando a que el correo salga.
+        enviarCodigoVerificacion(usuario.correo, codigo).catch((error) => {
+            console.log("Error al enviar correo de verificación (reenvío):", error);
+        });
 
         res.status(200).json({
             mensaje: "Se envió un nuevo código de verificación a tu correo."
@@ -280,13 +286,13 @@ router.post("/solicitar-recuperacion", async (req, res) => {
         usuario.codigoExpira = new Date(Date.now() + 10 * 60 * 1000);
         await usuario.save();
 
-        const enviado = await enviarCodigoRecuperacion(usuario.correo, codigo);
-
-        if (!enviado) {
-            return res.status(500).json({
-                mensaje: "No se pudo enviar el correo. Intenta de nuevo más tarde."
-            });
-        }
+        // 👇 Igual que en /registro: no bloqueamos esperando el correo.
+        // Aquí sí avisamos si el envío falla, pero de forma asíncrona —
+        // el usuario ya recibió su respuesta y puede pedir el código
+        // de nuevo si nunca le llega.
+        enviarCodigoRecuperacion(usuario.correo, codigo).catch((error) => {
+            console.log("Error al enviar correo de recuperación:", error);
+        });
 
         res.status(200).json({
             mensaje: "Código de verificación enviado a tu correo."

@@ -1,12 +1,21 @@
 const nodemailer = require("nodemailer");
 
-// Un solo transportador reutilizable para todo el backend
+// Un solo transportador reutilizable para todo el backend.
+//
+// 👇 Timeouts explícitos: sin esto, si Gmail no responde (algo común
+// en hosts como Render, que a veces limitan o bloquean SMTP saliente
+// en el plan gratuito), Nodemailer puede tardar minutos en fallar por
+// sí solo — y cualquier ruta que haga `await enviarCorreo(...)` se
+// queda colgada todo ese tiempo sin responderle nada al navegador.
 const transportador = nodemailer.createTransport({
     service: "gmail",
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD
-    }
+    },
+    connectionTimeout: 10000, // 10s máximo para establecer la conexión
+    greetingTimeout: 10000,   // 10s máximo para el saludo SMTP inicial
+    socketTimeout: 15000      // 15s máximo de inactividad en el socket
 });
 
 /**
@@ -44,7 +53,7 @@ async function enviarCodigoRecuperacion(destinatario, codigo) {
     return enviarCorreo(destinatario, "Código de recuperación · Juárez Observa", html);
 }
 
-// 👇 NUEVO: plantilla específica para verificar el correo al registrarse
+// Plantilla específica para verificar el correo al registrarse
 async function enviarCodigoVerificacion(destinatario, codigo) {
     const html = `
         <div style="font-family:Arial,sans-serif; max-width:480px; margin:0 auto;">
