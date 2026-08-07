@@ -1,5 +1,3 @@
-const API_BASE = 'https://ojito-a9d2.onrender.com/api';
-
 const TIPOS_INSTITUCION = [
   'Policía Municipal',
   'Bomberos',

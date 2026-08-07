@@ -131,7 +131,7 @@
 
   async function cargarParametrosPlataforma() {
     try {
-      const respuesta = await fetch('http://localhost:3000/api/admin/parametros');
+      const respuesta = await fetch(`${API_BASE}/admin/parametros`);
       if (respuesta.ok) {
         _parametrosPlataforma = await respuesta.json();
       }

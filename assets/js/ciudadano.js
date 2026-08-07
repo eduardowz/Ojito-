@@ -2,8 +2,6 @@
 const CDJ_CENTER = [31.6904, -106.4245];
 const CDJ_ZOOM = 13;
 
-const API_BASE = 'https://ojito-a9d2.onrender.com/api';
-
 let CATEGORIAS = {};
 
 async function cargarCategorias() {
