@@ -192,13 +192,23 @@
   }
 
   // ── Reenvío con countdown (mismo patrón que recuperar.html) ───
+  //
+  // 👇 IMPORTANTE: al terminar el countdown anterior, hacíamos
+  // btn.textContent = 'Reenviar código', lo que borraba el
+  // <span id="countdownReenvio"> que vivía DENTRO del botón.
+  // La siguiente vez que se llamaba a esta función, ese span ya
+  // no existía en el DOM y fallaba con "Cannot set properties of
+  // null". La solución: reconstruir el HTML del botón (con su
+  // span) cada vez que arrancamos el contador, en vez de asumir
+  // que el span sigue ahí.
   function iniciarCountdownReenvio() {
-    const btn      = document.getElementById('btnReenviar');
-    const spanSecs = document.getElementById('countdownReenvio');
-    let secs       = 30;
+    const btn = document.getElementById('btnReenviar');
+    let secs  = 30;
 
-    btn.disabled         = true;
-    spanSecs.textContent = secs;
+    btn.disabled  = true;
+    btn.innerHTML = `Reenviar en <span id="countdownReenvio">${secs}</span>s`;
+
+    const spanSecs = document.getElementById('countdownReenvio');
 
     if (_timerReenvio) clearInterval(_timerReenvio);
 
