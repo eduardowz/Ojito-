@@ -2,21 +2,17 @@ const express = require("express");
 const router = express.Router();
 
 const reporteController = require("../controllers/reporteController");
+const authInstitucion = require("../middleware/authInstitucion");
+const authCiudadano = require("../middleware/authCiudadano");
 
 router.post("/", reporteController.crearReporte);
-
 router.get("/", reporteController.obtenerReportes);
+router.get("/:id", reporteController.obtenerReportePorId);
 
-// Actualizar reporte (ciudadano, solo mientras está pendiente)
-router.put("/:id", reporteController.actualizarReporte);
+router.put("/:id", authCiudadano, reporteController.actualizarReporte);
+router.put("/:id/estado", authInstitucion, reporteController.actualizarEstadoInstitucion);
+router.post("/:id/bitacora", authInstitucion, reporteController.agregarBitacora);
 
-// NUEVO — Actualizar estado/progreso (institución)
-router.put("/:id/estado", reporteController.actualizarEstadoInstitucion);
-
-// NUEVO — Agregar avance a la bitácora: texto y/o foto de evidencia (institución)
-router.post("/:id/bitacora", reporteController.agregarBitacora);
-
-// Eliminar reporte
-router.delete("/:id", reporteController.eliminarReporte);
+router.delete("/:id", authCiudadano, reporteController.eliminarReporte);
 
 module.exports = router;

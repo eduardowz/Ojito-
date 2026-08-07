@@ -1,27 +1,67 @@
-// ══════════════════════════════════════════════════════════════
-// JUÁREZ OBSERVA · ciudadano.js
-// Lógica exclusiva de ciudadano.html — mapa real (Leaflet +
-// OpenStreetMap), geolocalización, selector de ubicación para
-// nuevos reportes y notificaciones reales generadas a partir de
-// los reportes y el historial del usuario.
-//
-// Depende de utilidades definidas en app.js:
-//   requireSesion(), obtenerSesion(), cerrarSesion(), inicialesDeNombre()
-// Depende de la librería global Leaflet (cargada vía CDN en el HTML).
-// ══════════════════════════════════════════════════════════════
-
 // Centro de referencia: Ciudad Juárez, Chihuahua, México
 const CDJ_CENTER = [31.6904, -106.4245];
 const CDJ_ZOOM = 13;
 
-const TIPOS = {
-  bache:      { label: 'Bache',      color: '#993C1D' },
-  alumbrado:  { label: 'Alumbrado',  color: '#b8860b' },
-  basura:     { label: 'Basura',     color: '#185FA5' },
-  seguridad:  { label: 'Seguridad',  color: '#3C3489' },
-  incendio:   { label: 'Incendio',   color: '#a32d2d' },
-  vandalismo: { label: 'Vandalismo', color: '#444444' },
-};
+let CATEGORIAS = {};
+
+async function cargarCategorias() {
+  try {
+    const respuesta = await fetch("http://localhost:3000/api/categorias");
+    const datos = await respuesta.json();
+
+    const mapa = {};
+    datos.forEach(cat => {
+      mapa[cat.clave] = {
+        label: cat.nombre,
+        color: cat.color,
+        icono: cat.icono,
+        institucion: cat.institucion,
+        clave: cat.clave,
+      };
+    });
+    CATEGORIAS = mapa;
+
+  } catch (error) {
+    console.error("No se pudieron cargar las categorías:", error);
+    CATEGORIAS = {
+      bache: { label: 'Bache', color: '#993C1D', icono: 'bache', clave: 'bache' },
+    };
+  }
+}
+
+function categoriaDe(clave) {
+  return CATEGORIAS[clave] || { label: clave || 'Reporte', color: '#5b5870', icono: 'generico', clave };
+}
+
+function poblarSelectCategorias() {
+  const select = $('repTipo');
+  if (!select) return;
+  select.innerHTML = '<option value="">Selecciona un tipo…</option>';
+  Object.values(CATEGORIAS)
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.clave;
+      opt.textContent = cat.label;
+      select.appendChild(opt);
+    });
+}
+
+function renderFiltrosYLeyenda() {
+  const filterBar = $('filterBar');
+  const legend = $('mapLegend');
+  if (!filterBar || !legend) return;
+
+  const categorias = Object.values(CATEGORIAS).sort((a, b) => a.label.localeCompare(b.label));
+
+  filterBar.innerHTML =
+    `<button class="jo-chip is-active" data-filter="todos">Todos</button>` +
+    categorias.map(cat => `<button class="jo-chip" data-filter="${cat.clave}">${cat.label}</button>`).join('');
+
+  legend.innerHTML = categorias
+    .map(cat => `<span><i style="background:${cat.color}"></i>${cat.label}</span>`)
+    .join('');
+}
 
 function iconSvg(type, size = 14) {
   const common = `width="${size}" height="${size}" viewBox="0 0 14 14" fill="none"`;
@@ -42,16 +82,15 @@ const STATUS_MAP = {
   resuelto:  { label: 'Resuelto',    cls: 'jo-badge--done', color: '#1d6b35' },
 };
 
-// Coordenadas reales aproximadas dentro de Ciudad Juárez para cada reporte demo
 let reportes = [];
-let historialUsuario = []; // eventos guardados en MongoDB (ej. eliminaciones)
+let historialUsuario = [];
 
 let filtroActual = 'todos';
-let map;                 // mapa principal (Leaflet)
-let markersLayer = {};   // id -> L.marker, para poder limpiarlos al filtrar
-let pickerMap;           // mini-mapa dentro del modal de nuevo reporte
-let pickerMarker;        // marcador arrastrable del picker
-let pickerLatLng = null; // última posición elegida en el picker
+let map;
+let markersLayer = {};
+let pickerMap;
+let pickerMarker;
+let pickerLatLng = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -61,7 +100,7 @@ async function cargarReportes() {
 
     const sesion = obtenerSesion();
 
-    const respuesta = await fetch("http://localhost:3000/api/reportes");
+    const respuesta = await fetch("http://localhost:3000/api/reportes?incluirResueltos=true");
 
     const datos = await respuesta.json();
 
@@ -71,7 +110,7 @@ async function cargarReportes() {
 
       type: r.tipo,
 
-      title: `${TIPOS[r.tipo].label} · ${r.direccion}`,
+      title: `${categoriaDe(r.tipo).label} · ${r.direccion}`,
 
       addr: r.direccion || "Sin dirección",
       descripcion: r.descripcion,
@@ -85,11 +124,13 @@ async function cargarReportes() {
 
       inst: r.institucion || null,
 
+      bitacora: r.bitacora || [],
+
       lat: r.latitud,
 
       lng: r.longitud,
 
-      mine: sesion && r.ciudadano.correo === sesion.correo
+      mine: sesion && r.ciudadano?.correo === sesion.correo
 
     }));
 
@@ -116,7 +157,7 @@ async function cargarHistorialUsuario() {
 
   try {
 
-    const respuesta = await fetch(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`);
+    const respuesta = await fetchAutenticado(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`);
     const datos = await respuesta.json();
 
     if (!respuesta.ok) {
@@ -138,7 +179,7 @@ async function guardarEventoHistorial(mensaje) {
 
   try {
 
-    const respuesta = await fetch(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`, {
+    const respuesta = await fetchAutenticado(`http://localhost:3000/api/usuarios/${sesion.correo}/historial`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -186,13 +227,17 @@ function tiempoTranscurrido(fecha) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// INIT — exige sesión vigente antes de mostrar nada
+// INIT
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   const sesion = requireSesion('login.html');
-  if (!sesion) return; // requireSesion ya redirigió
+  if (!sesion) return;
 
   aplicarSesionEnUI(sesion);
+
+  await cargarCategorias();
+  renderFiltrosYLeyenda();
+  poblarSelectCategorias();
 
   initMapaPrincipal();
   await cargarReportes();
@@ -209,7 +254,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initLocate();
   initAutocompleDireccion();
 
-  // Filtro mis reportes — unificado aquí para evitar doble DOMContentLoaded
   const filtro = $('filtroMisReportes');
   if (filtro) filtro.addEventListener('change', () => renderMisReportes(filtro.value));
 });
@@ -224,7 +268,7 @@ function aplicarSesionEnUI(sesion) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// MAPA PRINCIPAL (Leaflet real, OpenStreetMap)
+// MAPA PRINCIPAL
 // ══════════════════════════════════════════════════════════════
 function initMapaPrincipal() {
   map = L.map('leafletMap', {
@@ -238,17 +282,16 @@ function initMapaPrincipal() {
     maxZoom: 19,
   }).addTo(map);
 
-  // mueve el control de zoom para no chocar con los chips de filtro
   map.zoomControl.setPosition('bottomright');
 
   renderPins();
 }
 
 function pinDivIcon(type) {
-  const cfg = TIPOS[type] || TIPOS.bache;
+  const cfg = categoriaDe(type);
   return L.divIcon({
     className: 'jo-pin',
-    html: `<div class="jo-pin__dot" style="background:${cfg.color};">${iconSvg(type)}</div><div class="jo-pin__label">${cfg.label}</div>`,
+    html: `<div class="jo-pin__dot" style="background:${cfg.color};">${iconSvg(cfg.icono)}</div><div class="jo-pin__label">${cfg.label}</div>`,
     iconSize: [28, 40],
     iconAnchor: [14, 34],
     popupAnchor: [0, -30],
@@ -256,11 +299,11 @@ function pinDivIcon(type) {
 }
 
 function renderPins() {
-  // limpia marcadores existentes
   Object.values(markersLayer).forEach(m => map.removeLayer(m));
   markersLayer = {};
 
-  const lista = filtroActual === 'todos' ? reportes : reportes.filter(r => r.type === filtroActual);
+  const base = reportes.filter(r => r.status !== 'resuelto');
+  const lista = filtroActual === 'todos' ? base : base.filter(r => r.type === filtroActual);
 
   lista.forEach(r => {
     const marker = L.marker([r.lat, r.lng], { icon: pinDivIcon(r.type) }).addTo(map);
@@ -283,7 +326,7 @@ function centrarEnReporte(id) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// GEOLOCALIZACIÓN — botón "usar mi ubicación"
+// GEOLOCALIZACIÓN
 // ══════════════════════════════════════════════════════════════
 function initLocate() {
   $('btnLocate').addEventListener('click', () => {
@@ -332,15 +375,13 @@ function irASeccion(btnId, sectionId) {
   $(sectionId).classList.add('is-active');
   cerrarNotif();
 
-  // Leaflet necesita recalcular su tamaño si estuvo oculto (display:none)
   if (sectionId === 'sec-mapa' && map) {
     setTimeout(() => map.invalidateSize(), 50);
   }
 }
 
 // ══════════════════════════════════════════════════════════════
-// NOTIFICACIONES — generadas desde reportes reales + historial
-// (guardan cuáles ya se leyeron en localStorage, por usuario)
+// NOTIFICACIONES
 // ══════════════════════════════════════════════════════════════
 
 function claveNotifLeidas() {
@@ -368,16 +409,24 @@ function generarNotificaciones() {
     if (r.status === 'revision') {
       notifs.push({
         id: `rep-${r.id}-revision`,
-        msg: `Tu reporte de ${TIPOS[r.type].label} fue asignado${r.inst ? ' a ' + r.inst : ' a revisión'}.`,
+        msg: `Tu reporte de ${categoriaDe(r.type).label} fue asignado${r.inst ? ' a ' + r.inst : ' a revisión'}.`,
         fecha: r.fecha,
       });
     } else if (r.status === 'resuelto') {
       notifs.push({
         id: `rep-${r.id}-resuelto`,
-        msg: `Tu reporte de ${TIPOS[r.type].label} fue marcado como resuelto.`,
+        msg: `Tu reporte de ${categoriaDe(r.type).label} fue marcado como resuelto.`,
         fecha: r.fecha,
       });
     }
+
+    (r.bitacora || []).forEach((avance) => {
+      notifs.push({
+        id: `bit-${r.id}-${avance.fecha}`,
+        msg: `Nuevo avance: ${avance.texto || 'Se agregó evidencia al reporte.'}`,
+        fecha: avance.fecha,
+      });
+    });
   });
 
   (historialUsuario || []).forEach((h, i) => {
@@ -399,7 +448,6 @@ function renderNotificaciones() {
   const leidas = obtenerNotifLeidas();
   const noLeidas = notifs.filter(n => !leidas.includes(n.id));
 
-  // Limpia solo los items dinámicos (deja el encabezado y el botón de "limpiar")
   panel.querySelectorAll('.jo-notif-dynamic').forEach(el => el.remove());
 
   const referencia = $('btnClearNotif');
@@ -482,7 +530,9 @@ function initFiltros() {
 
 function renderReportList(ordenarRecientes = false) {
   const el = $('reportList');
-  let lista = filtroActual === 'todos' ? reportes : reportes.filter(r => r.type === filtroActual);
+
+  const base = reportes.filter(r => r.status !== 'resuelto');
+  let lista = filtroActual === 'todos' ? base : base.filter(r => r.type === filtroActual);
   if (ordenarRecientes) lista = [...lista].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
   if (!lista.length) {
@@ -491,11 +541,11 @@ function renderReportList(ordenarRecientes = false) {
   }
 
   el.innerHTML = lista.map(r => {
-    const cfg = TIPOS[r.type];
+    const cfg = categoriaDe(r.type);
     const st = STATUS_MAP[r.status];
     return `
       <div class="jo-rcard" data-id="${r.id}">
-        <div class="jo-rcard__thumb" style="color:${cfg.color};">${iconSvg(r.type)}</div>
+        <div class="jo-rcard__thumb" style="color:${cfg.color};">${iconSvg(cfg.icono)}</div>
         <div class="jo-rcard__info">
           <div class="jo-rcard__title">${r.title}</div>
           <div class="jo-rcard__meta">${r.time} · ${r.addr}</div>
@@ -528,11 +578,11 @@ function renderMisReportes(filtroEstado = 'todos') {
   }
 
   el.innerHTML = mias.map(r => {
-    const cfg = TIPOS[r.type];
+    const cfg = categoriaDe(r.type);
     const st = STATUS_MAP[r.status];
     return `
       <div class="jo-myrcard" data-id="${r.id}">
-        <div class="jo-myrcard__thumb" style="color:${cfg.color};">${iconSvg(r.type)}</div>
+        <div class="jo-myrcard__thumb" style="color:${cfg.color};">${iconSvg(cfg.icono)}</div>
         <div>
           <div class="jo-myrcard__title">${r.title}</div>
           <div class="jo-myrcard__meta">${r.time} · ${r.addr}</div>
@@ -566,21 +616,18 @@ function renderPerfilStats() {
 function renderHistorial() {
   const mias = reportes.filter(r => r.mine);
 
-  // Eventos derivados de los reportes actuales del usuario
   const eventosReportes = mias.map(r => {
-    let msg = `Enviaste el reporte · ${TIPOS[r.type].label}`;
-    if (r.status === 'resuelto') msg = `Tu reporte de ${TIPOS[r.type].label} fue marcado como resuelto`;
-    else if (r.status === 'revision') msg = `Tu reporte de ${TIPOS[r.type].label} está en revisión`;
+    let msg = `Enviaste el reporte · ${categoriaDe(r.type).label}`;
+    if (r.status === 'resuelto') msg = `Tu reporte de ${categoriaDe(r.type).label} fue marcado como resuelto`;
+    else if (r.status === 'revision') msg = `Tu reporte de ${categoriaDe(r.type).label} está en revisión`;
     return { msg, fecha: r.fecha || new Date(0) };
   });
 
-  // Eventos guardados en MongoDB (ej. "Eliminaste el reporte #X")
   const eventosGuardados = (historialUsuario || []).map(h => ({
     msg: h.mensaje,
     fecha: h.fecha
   }));
 
-  // Combinamos ambas fuentes y ordenamos por fecha, más reciente primero
   const historial = [...eventosReportes, ...eventosGuardados]
     .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
     .slice(0, 6)
@@ -646,7 +693,6 @@ function initPerfil() {
       return;
     }
 
-
     const sesion = obtenerSesion();
     try {
 
@@ -656,7 +702,7 @@ function initPerfil() {
         passwordHash = await hashPassword($('editPassword').value.trim());
       }
 
-      const respuesta = await fetch(`http://localhost:3000/api/usuarios/${sesion.correo}`, {
+      const respuesta = await fetchAutenticado(`http://localhost:3000/api/usuarios/${sesion.correo}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -675,7 +721,15 @@ function initPerfil() {
         throw new Error(datos.mensaje);
       }
 
-      // Actualizar la sesión local
+      // 👇 Si el correo cambió, el token viejo queda desincronizado
+      // (el backend valida req.usuario.correo === req.params.correo).
+      // Forzamos cerrar sesión para que vuelva a loguearse con un token nuevo.
+      if (datos.usuario.correo !== sesion.correo) {
+        mostrarAlerta($('perfilAlert'), '✅ Correo actualizado. Por seguridad, vuelve a iniciar sesión.', 'success');
+        setTimeout(() => cerrarSesion('login.html'), 1500);
+        return;
+      }
+
       sesion.nombre = datos.usuario.nombre;
       sesion.correo = datos.usuario.correo;
 
@@ -707,7 +761,7 @@ function initPerfil() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// MODAL — NUEVO REPORTE (con mini-mapa selector de ubicación)
+// MODAL — NUEVO REPORTE
 // ══════════════════════════════════════════════════════════════
 function initModalReporte() {
   $('btnNuevoReporte').addEventListener('click', abrirModalReporte);
@@ -744,7 +798,6 @@ function initModalReporte() {
 }
 
 function abrirModalReporte() {
-  // Cierra el detalle si estuviera abierto por accidente
   cerrarModalDetalle();
 
   $('modalOverlay').hidden = false;
@@ -756,9 +809,6 @@ function abrirModalReporte() {
   montarPickerMap(centroInicial);
 }
 
-// Monta (o reutiliza) el mini-mapa del picker de forma robusta: reintenta el
-// invalidateSize varias veces mientras el modal termina su animación de
-// entrada, para que Leaflet nunca calcule un tamaño 0x0 y se quede en blanco.
 function montarPickerMap(centroInicial) {
   const construir = () => {
     if (!pickerMap) {
@@ -788,9 +838,6 @@ function montarPickerMap(centroInicial) {
       pickerMarker.setLatLng(centroInicial);
     }
 
-    // Reintenta el recálculo de tamaño en varios frames: el modal todavía
-    // puede estar en mitad de su animación de entrada (jo-modal-in) cuando
-    // Leaflet mide el contenedor, lo que antes dejaba el mapa en blanco.
     [50, 150, 350].forEach(ms => {
       setTimeout(() => {
         if (pickerMap) pickerMap.invalidateSize();
@@ -800,7 +847,6 @@ function montarPickerMap(centroInicial) {
     actualizarCoordsTexto();
   };
 
-  // Espera un frame para asegurar que el contenedor ya tiene dimensiones
   requestAnimationFrame(() => requestAnimationFrame(construir));
 }
 
@@ -863,13 +909,11 @@ async function enviarNuevoReporte() {
 
     const editando = $('formNuevoReporte').dataset.editando;
 
-
     const url = editando
       ? `http://localhost:3000/api/reportes/${editando}`
       : 'http://localhost:3000/api/reportes';
 
-
-    const respuesta = await fetch(url, {
+    const respuesta = await fetchAutenticado(url, {
 
       method: editando ? 'PUT' : 'POST',
 
@@ -895,7 +939,6 @@ async function enviarNuevoReporte() {
       throw new Error(datos.mensaje || 'No se pudo registrar el reporte.');
     }
 
-    // Lo agregamos también a la interfaz local
     await cargarReportes();
 
     $('formNuevoReporte').dataset.editando = '';
@@ -927,13 +970,9 @@ async function enviarNuevoReporte() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// AUTOCOMPLETADO DE DIRECCIÓN — Nominatim (OpenStreetMap)
+// AUTOCOMPLETADO DE DIRECCIÓN — Nominatim
 // ══════════════════════════════════════════════════════════════
 
-// Caja delimitadora aproximada de Ciudad Juárez (min_lon,max_lat,max_lon,min_lat)
-// Se usa solo como SESGO (sin "bounded=1"), nunca como filtro estricto —
-// muchas colonias de Juárez no están bien mapeadas y bounded=1 las descartaba
-// aunque el nombre existiera realmente.
 const CDJ_VIEWBOX = '-106.62,31.85,-106.25,31.55';
 
 let addrDebounceTimer = null;
@@ -959,7 +998,6 @@ function initAutocompleDireccion() {
     addrDebounceTimer = setTimeout(() => buscarDirecciones(texto), 400);
   });
 
-  // Cierra las sugerencias si haces clic fuera
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#campoDireccion')) {
       box.hidden = true;
@@ -967,19 +1005,25 @@ function initAutocompleDireccion() {
   });
 }
 
+const _cacheDirecciones = new Map();
+
 async function buscarDirecciones(texto) {
   const box = $('addrSuggestions');
+  const claveCache = texto.trim().toLowerCase();
+
+  if (_cacheDirecciones.has(claveCache)) {
+    mostrarSugerencias(_cacheDirecciones.get(claveCache));
+    return;
+  }
 
   try {
-    // 1er intento: sesgado a Ciudad Juárez (más preciso si el nombre existe en OSM)
     let resultados = await intentarBusquedaNominatim(texto, true);
 
-    // 2do intento (fallback): sin sesgo geográfico, solo filtrando por país.
-    // Cubre casos donde el resultado real quedó fuera del viewbox o la
-    // dirección normalizada por Nominatim no coincide exactamente.
     if (!resultados.length) {
       resultados = await intentarBusquedaNominatim(texto, false);
     }
+
+    _cacheDirecciones.set(claveCache, resultados);
 
     if (!resultados.length) {
       box.innerHTML = `<div class="jo-suggestion-empty">Sin coincidencias en el mapa. Escribe la referencia manualmente y ajusta el punto abajo.</div>`;
@@ -987,22 +1031,28 @@ async function buscarDirecciones(texto) {
       return;
     }
 
-    box.innerHTML = resultados.map((r, i) => `
-      <div class="jo-suggestion-item" data-index="${i}">${r.display_name}</div>
-    `).join('');
-    box.hidden = false;
-
-    box.querySelectorAll('.jo-suggestion-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const r = resultados[item.dataset.index];
-        seleccionarDireccion(r);
-      });
-    });
+    mostrarSugerencias(resultados);
 
   } catch (error) {
     console.error('Error de geocodificación:', error);
     box.innerHTML = `<div class="jo-suggestion-empty">No se pudo buscar. Escribe la dirección manualmente.</div>`;
   }
+}
+
+function mostrarSugerencias(resultados) {
+  const box = $('addrSuggestions');
+
+  box.innerHTML = resultados.map((r, i) => `
+    <div class="jo-suggestion-item" data-index="${i}">${r.display_name}</div>
+  `).join('');
+  box.hidden = false;
+
+  box.querySelectorAll('.jo-suggestion-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const r = resultados[item.dataset.index];
+      seleccionarDireccion(r);
+    });
+  });
 }
 
 async function intentarBusquedaNominatim(texto, sesgadoAJuarez) {
@@ -1021,12 +1071,10 @@ function seleccionarDireccion(resultado) {
   const lat = parseFloat(resultado.lat);
   const lng = parseFloat(resultado.lon);
 
-  // Solo el nombre corto (calle/colonia) en vez del display_name completo
   const nombreCorto = resultado.display_name.split(',').slice(0, 2).join(',').trim();
   $('repAddr').value = nombreCorto;
   $('addrSuggestions').hidden = true;
 
-  // Mueve el marcador del picker a la ubicación encontrada
   pickerLatLng = L.latLng(lat, lng);
   if (pickerMarker && pickerMap) {
     pickerMarker.setLatLng(pickerLatLng);
@@ -1056,13 +1104,13 @@ function initModalDetalle() {
 function abrirDetalle(id) {
   const r = reportes.find(x => x.id === id);
   if (!r) return;
-  const cfg = TIPOS[r.type];
+  const cfg = categoriaDe(r.type);
   const st = STATUS_MAP[r.status];
 
-  $('detailTitle').textContent = `Reporte #${r.id} · ${cfg.label}`;
+  $('detailTitle').textContent = `${cfg.label} · ${r.addr}`;
   $('detailBody').innerHTML = `
     <div style="height:110px;background:var(--jo-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;color:${cfg.color};margin-bottom:1rem;">
-      <span style="display:flex;">${iconSvg(r.type, 40)}</span>
+      <span style="display:flex;">${iconSvg(cfg.icono, 40)}</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px;">
       <div style="display:flex;justify-content:space-between;"><span style="color:var(--jo-muted);">Tipo</span><strong>${cfg.label}</strong></div>
@@ -1112,30 +1160,21 @@ function editarReporte(id) {
     return;
   }
 
-  // cerrar ventana de detalle
   cerrarModalDetalle();
 
-  // abrir formulario de reporte
   $('modalOverlay').hidden = false;
   document.body.style.overflow = 'hidden';
 
-
-  // cargar datos del reporte
   $('repTipo').value = r.type;
   $('repDesc').value = r.descripcion || '';
   $('repAddr').value = r.addr;
 
-
-  // cargar ubicación
   pickerLatLng = { lat: r.lat, lng: r.lng };
 
   montarPickerMap(pickerLatLng);
 
-  // indicar que estamos editando
   $('formNuevoReporte').dataset.editando = r.id;
 
-
-  // cambiar texto del botón
   $('btnEnviarReporte').textContent = "Guardar cambios";
 }
 
@@ -1147,9 +1186,9 @@ async function eliminarReporte(id) {
   try {
 
     const r = reportes.find(x => x.id === id);
-    const etiquetaTipo = r ? TIPOS[r.type].label : 'reporte';
+    const etiquetaTipo = r ? categoriaDe(r.type).label : 'reporte';
 
-    const respuesta = await fetch(`http://localhost:3000/api/reportes/${id}`, {
+    const respuesta = await fetchAutenticado(`http://localhost:3000/api/reportes/${id}`, {
       method: "DELETE"
     });
 
@@ -1159,7 +1198,6 @@ async function eliminarReporte(id) {
       throw new Error(datos.mensaje || "No se pudo eliminar el reporte.");
     }
 
-    // 👇 Guardamos el evento en MongoDB para que persista entre dispositivos
     await guardarEventoHistorial(`Eliminaste tu reporte de ${etiquetaTipo}`);
 
     cerrarModalDetalle();
@@ -1178,7 +1216,6 @@ async function eliminarReporte(id) {
     mostrarToast(error.message);
   }
 }
-
 
 function cerrarModalDetalle() {
   const overlay = $('detailOverlay');

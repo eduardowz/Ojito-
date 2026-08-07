@@ -49,8 +49,6 @@
         Un solo acceso para ciudadanos e instituciones. Tu cuenta se reconoce automáticamente.
       </p>
 
-      <!-- ✅ NUEVO: aviso visible cuando la plataforma está en mantenimiento.
-           Se muestra/oculta desde JS según joAdmin_parametros.mantenimiento -->
       <div class="alert alert--error" id="mantenimientoAviso" style="display:none;">
         🚧 La plataforma está en mantenimiento en este momento. Solo el acceso de administrador
         está disponible. Intenta de nuevo más tarde.
@@ -125,26 +123,23 @@
 <script>
   let _bloqueado       = false;
   let _intentosCaptcha = 0;
-  const _MAX_INTENTOS  = 3;
+  let _MAX_INTENTOS    = 3;
   let _timerBloqueo    = null;
   let _captchaValor    = '';
 
-  // ══════════════════════════════════════════════════════════════
-  // ✅ NUEVO: MODO MANTENIMIENTO
-  // Lee el mismo parámetro que guarda el panel de administrador
-  // (assets: joAdmin_parametros -> { mantenimiento: true/false }).
-  // Cuando está activo, se avisa en pantalla y se bloquea el acceso
-  // de ciudadanos e instituciones en handleLogin(). El administrador
-  // NUNCA se bloquea, sin importar este valor.
-  // ══════════════════════════════════════════════════════════════
-  function _leerParametrosPlataforma() {
+  let _parametrosPlataforma = {};
+
+  async function cargarParametrosPlataforma() {
     try {
-      return JSON.parse(localStorage.getItem('joAdmin_parametros')) || {};
-    } catch { return {}; }
+      const respuesta = await fetch('http://localhost:3000/api/admin/parametros');
+      if (respuesta.ok) {
+        _parametrosPlataforma = await respuesta.json();
+      }
+    } catch { /* si falla, usamos los valores por defecto abajo */ }
   }
 
   function estaEnMantenimiento() {
-    return !!_leerParametrosPlataforma().mantenimiento;
+    return !!_parametrosPlataforma.mantenimiento;
   }
 
   function actualizarAvisoMantenimiento() {
@@ -153,14 +148,14 @@
     aviso.style.display = estaEnMantenimiento() ? 'block' : 'none';
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     pintarRetícula('loginGrid', 16);
+    await cargarParametrosPlataforma();
+    if (_parametrosPlataforma.intentosCaptcha) {
+      _MAX_INTENTOS = _parametrosPlataforma.intentosCaptcha;
+    }
     generarCaptchaCanvas();
     actualizarAvisoMantenimiento();
-
-    // ✅ Siembra la cuenta de administrador por defecto la primera vez
-    // que se abre la app (no hace nada si ya existe un administrador).
-    if (typeof sembrarAdminPorDefecto === 'function') sembrarAdminPorDefecto();
 
     document.getElementById('formLogin').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -169,7 +164,7 @@
   });
 
   // ══════════════════════════════════════════════════════════════
-  // CAPTCHA (sin cambios respecto a tu versión original)
+  // CAPTCHA
   // ══════════════════════════════════════════════════════════════
   function generarCaptchaCanvas(canvasId = 'captchaCanvas') {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -271,15 +266,6 @@
 
   // ══════════════════════════════════════════════════════════════
   // VALIDACIÓN Y SUBMIT
-  // ✅ El rol (ciudadano / institución / administrador) se detecta
-  // automáticamente según en qué almacén coincidan el correo + hash
-  // de contraseña. El usuario NO elige su rol — evita que alguien
-  // intente entrar como institución o administrador sin serlo.
-  //
-  // ✅ NUEVO: si el modo mantenimiento está activo, solo se permite
-  // el login de administrador. Se comprueba admin primero (para
-  // permitirle entrar siempre) y, si no coincide, se corta el flujo
-  // antes de tocar los almacenes de ciudadano/institución.
   // ══════════════════════════════════════════════════════════════
   async function handleLogin() {
     if (_bloqueado) return;
@@ -288,19 +274,16 @@
     const alerta   = document.getElementById('loginAlert');
     let valido = true;
 
-    // Correo
     if (!REGEX_CORREO.test(correo.value.trim())) {
       mostrarError(document.getElementById('campoCorreo'),'Ingresa un correo válido.');
       valido=false;
     } else { limpiarError(document.getElementById('campoCorreo')); }
 
-    // Contraseña
     if (password.value.length < 8) {
       mostrarError(document.getElementById('campoPassword'),'Mínimo 8 caracteres.');
       valido=false;
     } else { limpiarError(document.getElementById('campoPassword')); }
 
-    // Captcha
     if (!validarCaptcha()) { valido=false; }
     else { limpiarError(document.getElementById('campoCaptcha')); }
 
@@ -317,24 +300,17 @@
     const passwordVal   = password.value;
 
     // ── 1) ¿Coincide como administrador general? ──────────────
-    // Se revisa primero porque es la cuenta más sensible: así no
-    // corre el riesgo de "perderse" contra un match accidental en
-    // otro almacén. Además, el administrador debe poder entrar
-    // SIEMPRE, incluso con el modo mantenimiento activado.
     if (typeof verificarCredencialesAdmin === 'function') {
-      const admin = await verificarCredencialesAdmin(correoVal, passwordVal);
-      if (admin) {
-        crearSesionAdmin(admin.correo, admin.nombre);
+      const resultadoAdmin = await verificarCredencialesAdmin(correoVal, passwordVal);
+      if (resultadoAdmin) {
+        crearSesionAdmin(resultadoAdmin.admin.correo, resultadoAdmin.admin.nombre, resultadoAdmin.token);
         mostrarAlerta(alerta, '✅ Acceso de administrador. Redirigiendo…', 'success');
         setTimeout(() => { window.location.href = 'administrador_dashboard.html'; }, 900);
         return;
       }
     }
 
-    // ── 1.5) ✅ NUEVO: si NO era administrador y el modo
-    // mantenimiento está activo, se bloquea aquí el acceso de
-    // ciudadanos e instituciones, sin llegar a revisar sus
-    // credenciales.
+    // ── 1.5) Modo mantenimiento: solo admin puede pasar ────────
     if (estaEnMantenimiento()) {
       mostrarAlerta(alerta,
         '🚧 La plataforma está en mantenimiento. Solo el administrador puede iniciar sesión en este momento.',
@@ -346,15 +322,15 @@
     }
 
     // ── 2) ¿Coincide como ciudadano? ───────────────────────────
-    // ── 2) ¿Coincide como ciudadano? ───────────────────────────
-    const usuario = await verificarCredenciales(correoVal, passwordVal);
+    const resultadoCiudadano = await verificarCredenciales(correoVal, passwordVal);
 
-    if (usuario) {
+    if (resultadoCiudadano) {
 
       crearSesion(
-        usuario.correo,
-        usuario.nombre,
-        usuario.telefono
+        resultadoCiudadano.usuario.correo,
+        resultadoCiudadano.usuario.nombre,
+        resultadoCiudadano.usuario.telefono,
+        resultadoCiudadano.token
       );
 
       mostrarAlerta(alerta, '✅ Credenciales correctas. Redirigiendo…', 'success');
@@ -367,10 +343,10 @@
     }
 
     // ── 3) ¿Coincide como institución? ─────────────────────────
-    const institucion = await verificarCredencialesInstitucion(correoVal, passwordVal);
-    if (institucion) {
-      crearSesionInstitucion(institucion);
-      mostrarAlerta(alerta, `✅ Acceso institucional (${institucion.tipo}). Redirigiendo…`, 'success');
+    const resultado = await verificarCredencialesInstitucion(correoVal, passwordVal);
+    if (resultado) {
+      crearSesionInstitucion(resultado.institucion, resultado.token);
+      mostrarAlerta(alerta, `✅ Acceso institucional (${resultado.institucion.tipo}). Redirigiendo…`, 'success');
       setTimeout(() => { window.location.href = 'institucion_dashboard.html'; }, 900);
       return;
     }

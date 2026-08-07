@@ -229,12 +229,6 @@
   .chip-card__meta{font-size:12px;color:#847f97;margin-top:6px;}
   .chip-card__actions{display:flex;gap:6px;margin-top:12px;}
 
-  /* ── permisos: matriz + switches ─────────────────────────── */
-  table.perm-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--jo-line);border-radius:10px;overflow:hidden;}
-  table.perm-table th, table.perm-table td{padding:11px 12px;border-bottom:1px solid var(--jo-line-soft);text-align:center;font-size:12.5px;}
-  table.perm-table th{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:#847f97;background:#fafaf8;border-bottom:1px solid var(--jo-line);}
-  table.perm-table td:first-child, table.perm-table th:first-child{text-align:left;font-family:var(--font-body);font-weight:600;font-size:13.5px;color:var(--jo-ink);}
-  table.perm-table tr:last-child td{border-bottom:none;}
 
   .toggle{position:relative;display:inline-block;width:38px;height:22px;flex:none;}
   .toggle input{opacity:0;width:0;height:0;}
@@ -354,7 +348,6 @@
 
       <div class="sidebar__nav-label">Configuración</div>
       <button class="navbtn" data-view="categorias">🏷️ Categorías</button>
-      <button class="navbtn" data-view="permisos">🔐 Permisos</button>
       <button class="navbtn" data-view="parametros">⚙️ Parámetros</button>
 
       <div class="sidebar__nav-label">Análisis</div>
@@ -469,15 +462,12 @@
         <div>
           <div class="main__eyebrow">Bitácora del sistema</div>
           <h1 class="main__title">Supervisar actividades</h1>
-          <p class="main__sub">Registro de acciones de ciudadanos, instituciones y otros administradores dentro de la plataforma.</p>
+          <p class="main__sub">Registro de acciones realizadas por el administrador.</p>
         </div>
       </div>
       <div class="toolbar">
         <div class="toolbar__filters">
-          <select class="jo-select-sm" id="filtroRolActividad">
-            <option value="Todos">Todos los roles</option>
-            <option value="Ciudadano">Ciudadano</option>
-            <option value="Institución">Institución</option>
+          <select class="jo-select-sm" id="filtroRolActividad" hidden>
             <option value="Administrador">Administrador</option>
           </select>
         </div>
@@ -498,18 +488,6 @@
         <button class="btn" id="btnNuevaCategoria">+ Nueva categoría</button>
       </div>
       <div class="chip-grid" id="chipGridCategorias"></div>
-    </section>
-
-    <!-- ---------- PERMISOS ---------- -->
-    <section class="view" id="view-permisos">
-      <div class="main__header">
-        <div>
-          <div class="main__eyebrow">Control de acceso</div>
-          <h1 class="main__title">Gestionar permisos</h1>
-          <p class="main__sub">Define qué puede hacer cada rol dentro de la plataforma. Los cambios se aplican de inmediato.</p>
-        </div>
-      </div>
-      <div id="permisosTableWrap"></div>
     </section>
 
     <!-- ---------- ESTADÍSTICAS GLOBALES ---------- -->
@@ -691,7 +669,6 @@
   const LS_USUARIOS      = 'joAdmin_usuarios';
   const LS_INSTITUCIONES = 'joAdmin_instituciones';
   const LS_CATEGORIAS    = 'joAdmin_categorias';
-  const LS_PERMISOS      = 'joAdmin_permisos';
   const LS_PARAMETROS    = 'joAdmin_parametros';
   const LS_ACTIVIDAD     = 'joAdmin_actividad';
 
@@ -726,57 +703,15 @@
   ];
 
   function seedSiVacio(){
-    if (!localStorage.getItem(LS_INSTITUCIONES)){
-      const instituciones = TIPOS_INSTITUCION_SEED.map((tipo,i) => ({
-        id: nuevoId(), nombre: tipo, tipo,
-        correo: tipo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]+/g,'') + '@juarez.gob.mx',
-        fechaRegistro: Date.now() - (300 - i*20) * 86400000,
-        estado: i === 7 ? 'Suspendida' : 'Activa'
-      }));
-      escribirLS(LS_INSTITUCIONES, instituciones);
-    }
+    
     if (!localStorage.getItem(LS_CATEGORIAS)){
       escribirLS(LS_CATEGORIAS, CATEGORIAS_DEFAULT.map(c => ({ id: nuevoId(), ...c })));
-    }
-    if (!localStorage.getItem(LS_USUARIOS)){
-      const nombres = ['María Ríos','Jorge Salcido','Ana Portillo','Luis Domínguez','Karla Nevárez','Iván Chávez','Paty Loya','Ricardo Ponce','Sofía Terrazas','Emilio Bustos','Diana Reyes','Fernando Quiroz'];
-      const usuarios = nombres.map((nombre,i) => ({
-        id: nuevoId(), nombre,
-        correo: nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.') + '@correo.com',
-        telefono: '656' + (1000000 + Math.floor(Math.random()*8999999)),
-        fechaRegistro: Date.now() - Math.floor(Math.random()*250)*86400000,
-        estado: i === 4 ? 'Suspendido' : 'Activo'
-      }));
-      escribirLS(LS_USUARIOS, usuarios);
-    }
-    if (!localStorage.getItem(LS_PERMISOS)){
-      escribirLS(LS_PERMISOS, [
-        { rol:'Administrador general', usuarios:true, instituciones:true, reportes:true, asignar:true, actividad:true, categorias:true, permisos:true, estadisticas:true, parametros:true, fijo:true },
-        { rol:'Institución',           usuarios:false, instituciones:false, reportes:true, asignar:false, actividad:false, categorias:false, permisos:false, estadisticas:false, parametros:false },
-        { rol:'Ciudadano',             usuarios:false, instituciones:false, reportes:false, asignar:false, actividad:false, categorias:false, permisos:false, estadisticas:false, parametros:false },
-      ]);
     }
     if (!localStorage.getItem(LS_PARAMETROS)){
       escribirLS(LS_PARAMETROS, {
         nombrePlataforma:'Juárez Observa', correoSoporte:'soporte@juarezobserva.mx',
         tiempoLimiteHoras:72, intentosCaptcha:3, mantenimiento:false, registroAbierto:true, notifCorreo:true
       });
-    }
-    if (!localStorage.getItem(LS_ACTIVIDAD)){
-      const cats = CATEGORIAS_DEFAULT;
-      const acts = [
-        ['Ciudadano','María Ríos','Creó un reporte de "Baches" en Av. Tecnológico'],
-        ['Institución','Alumbrado Público','Cambió el estado de un reporte a "En proceso"'],
-        ['Institución','Agua y Saneamiento','Marcó un reporte como "Resuelto"'],
-        ['Administrador','Admin general','Suspendió la cuenta de un usuario'],
-        ['Ciudadano','Jorge Salcido','Creó un reporte de "Fuga de agua" en Col. Partido Romero'],
-        ['Administrador','Admin general','Reasignó un reporte a "Obras Públicas"'],
-        ['Institución','Obras Públicas','Agregó evidencia fotográfica a un reporte'],
-        ['Ciudadano','Karla Nevárez','Creó un reporte de "Grafiti" en Col. Campestre'],
-      ];
-      escribirLS(LS_ACTIVIDAD, acts.map(([rol,actor,detalle],i) => ({
-        id:nuevoId(), rol, actor, detalle, fecha: Date.now() - i*3*3600000
-      })));
     }
   }
 
@@ -793,8 +728,6 @@
   const guardarInstituciones = (v) => escribirLS(LS_INSTITUCIONES, v);
   const obtenerCategorias    = () => leerLS(LS_CATEGORIAS, []);
   const guardarCategorias    = (v) => escribirLS(LS_CATEGORIAS, v);
-  const obtenerPermisos      = () => leerLS(LS_PERMISOS, []);
-  const guardarPermisos      = (v) => escribirLS(LS_PERMISOS, v);
   const obtenerParametros    = () => leerLS(LS_PARAMETROS, {});
   const guardarParametros    = (v) => escribirLS(LS_PARAMETROS, v);
   const obtenerActividad     = () => leerLS(LS_ACTIVIDAD, []);
@@ -802,16 +735,8 @@
   // Reportes: se reutiliza el store del rol institucional si existe
   // (obtenerReportesPorInstitucion / cambiarEstadoReporte / etc. de
   // institucion.js). Si no está disponible, caemos a un store propio.
-  function obtenerTodosLosReportes(){
-    if (typeof obtenerReportesPorInstitucion === 'function'){
-      const insts = obtenerInstituciones();
-      let todos = [];
-      insts.forEach(inst => { todos = todos.concat(obtenerReportesPorInstitucion(inst.tipo)); });
-      // dedup por id
-      const vistos = new Set();
-      return todos.filter(r => vistos.has(r.id) ? false : (vistos.add(r.id), true));
-    }
-    return leerLS('joAdmin_reportes_fallback', []);
+  async function obtenerTodosLosReportes(){
+    return await obtenerTodosLosReportesAdmin();
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -827,7 +752,18 @@
   const COLOR_ESTADO = { 'Pendiente':'var(--jo-terracotta)', 'En proceso':'var(--jo-steel)', 'Resuelto':'var(--jo-forest)' };
   const BADGE_CLASE  = { 'Pendiente':'badge--pendiente', 'En proceso':'badge--proceso', 'Resuelto':'badge--resuelto' };
 
-  document.addEventListener('DOMContentLoaded', () => {
+    const ICONOS_CATEGORIA = {
+    bache:       '🕳️',
+    alumbrado:   '💡',
+    basura:      '🗑️',
+    seguridad:   '🚨',
+    incendio:    '🔥',
+    vandalismo:  '🎨',
+    generico:    '📍',
+    advertencia: '⚠️',
+  };
+
+  document.addEventListener('DOMContentLoaded', async () => {
     seedSiVacio();
 
     // ✅ Protege el panel: si no hay sesión de administrador válida
@@ -846,8 +782,7 @@
     initReportes();
     initDetailPanel();
     initCategorias();
-    initPermisos();
-    initParametros();
+    await initParametros();
     initModal();
 
     document.getElementById('btnCerrarSesion').addEventListener('click', () => {
@@ -857,15 +792,14 @@
     renderTodo();
   });
 
-  function renderTodo(){
+  async function renderTodo(){
     renderUsuarios();
-    renderInstituciones();
-    renderReportesAdmin();
-    renderAsignacion();
+    await renderInstituciones();
+    await renderReportesAdmin();
+    await renderAsignacion();
     renderActividad();
-    renderCategorias();
-    renderPermisos();
-    renderEstadisticasGlobales();
+    await renderCategorias();
+    await renderEstadisticasGlobales();
     poblarFiltrosDeReporte();
   }
 
@@ -874,11 +808,18 @@
   // ══════════════════════════════════════════════════════════════
   function initNav(){
     document.querySelectorAll('.navbtn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         document.querySelectorAll('.navbtn').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('is-active'));
         document.getElementById('view-' + btn.dataset.view).classList.add('is-active');
+
+        const vista = btn.dataset.view;
+        if (vista === 'reportes') await renderReportesAdmin();
+        if (vista === 'asignacion') await renderAsignacion();
+        if (vista === 'estadisticas') await renderEstadisticasGlobales();
+        if (vista === 'categorias') await renderCategorias();
+        if (vista === 'instituciones') await renderInstituciones();
       });
     });
   }
@@ -888,14 +829,22 @@
   // ══════════════════════════════════════════════════════════════
   function initUsuarios(){
     document.getElementById('btnNuevoUsuario').addEventListener('click', () => abrirModalUsuario(null));
-    document.getElementById('buscarUsuario').addEventListener('input', renderUsuarios);
+    document.getElementById('buscarUsuario').addEventListener('input', () => renderUsuarios());
     document.getElementById('filtroEstadoUsuario').addEventListener('change', (e) => {
       filtroEstadoUsuarioActual = e.target.value; renderUsuarios();
     });
-  }
+}
 
-  function renderUsuarios(){
-    const todos = obtenerUsuarios();
+  async function renderUsuarios(){
+    let todos;
+    try {
+      todos = await obtenerUsuariosAdmin();
+    } catch (error) {
+      document.getElementById('tablaUsuariosWrap').innerHTML =
+        `<div class="empty"><div class="empty__title">Error al cargar usuarios</div><div class="empty__sub">${error.message}</div></div>`;
+      return;
+    }
+
     document.getElementById('cntUsuarios').textContent = todos.length || '';
 
     const activos = todos.filter(u => u.estado === 'Activo').length;
@@ -939,60 +888,75 @@
         </tbody>
       </table>`;
 
-    wrap.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () => abrirModalUsuario(b.dataset.editar)));
-    wrap.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
-      const list = obtenerUsuarios();
-      const u = list.find(x => x.id === b.dataset.toggle);
-      u.estado = u.estado === 'Activo' ? 'Suspendido' : 'Activo';
-      guardarUsuarios(list);
-      registrarActividad('Administrador', ADMIN.nombre, `${u.estado === 'Suspendido' ? 'Suspendió' : 'Reactivó'} la cuenta de ${u.nombre}`);
-      renderUsuarios(); renderActividad();
+    wrap.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () => {
+      const u = todos.find(x => x.id === b.dataset.editar);
+      abrirModalUsuario(u);
     }));
-    wrap.querySelectorAll('[data-eliminar]').forEach(b => b.addEventListener('click', () => {
+
+    wrap.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', async () => {
+      const u = todos.find(x => x.id === b.dataset.toggle);
+      const nuevoEstado = u.estado === 'Activo' ? 'Suspendido' : 'Activo';
+      try {
+        await cambiarEstadoUsuarioAdmin(u.id, nuevoEstado);
+        registrarActividad('Administrador', ADMIN.nombre, `${nuevoEstado === 'Suspendido' ? 'Suspendió' : 'Reactivó'} la cuenta de ${u.nombre}`);
+        await renderUsuarios(); renderActividad();
+      } catch (error) {
+        alert(error.message);
+      }
+    }));
+
+    wrap.querySelectorAll('[data-eliminar]').forEach(b => b.addEventListener('click', async () => {
       if (!confirm('¿Eliminar esta cuenta de usuario? Esta acción no se puede deshacer.')) return;
-      const list = obtenerUsuarios().filter(x => x.id !== b.dataset.eliminar);
-      guardarUsuarios(list);
-      registrarActividad('Administrador', ADMIN.nombre, 'Eliminó una cuenta de usuario');
-      renderUsuarios(); renderActividad();
+      try {
+        await eliminarUsuarioAdmin(b.dataset.eliminar);
+        registrarActividad('Administrador', ADMIN.nombre, 'Eliminó una cuenta de usuario');
+        await renderUsuarios(); renderActividad();
+      } catch (error) {
+        alert(error.message);
+      }
     }));
   }
 
-  function abrirModalUsuario(id){
-    const u = id ? obtenerUsuarios().find(x => x.id === id) : null;
-    modalContext = { tipo:'usuario', id };
+  function abrirModalUsuario(u){
+    modalContext = { tipo:'usuario', id: u ? u.id : null };
     document.getElementById('modalTitle').textContent = u ? 'Editar usuario' : 'Nuevo usuario';
     document.getElementById('modalBody').innerHTML = `
       <div class="form-field"><label>Nombre completo</label><input class="jo-input" id="mNombre" value="${u ? u.nombre : ''}"></div>
       <div class="form-field"><label>Correo</label><input class="jo-input" id="mCorreo" type="email" value="${u ? u.correo : ''}"></div>
       <div class="form-field"><label>Teléfono</label><input class="jo-input" id="mTelefono" value="${u ? (u.telefono||'') : ''}"></div>
-      <div class="form-field"><label>Estado</label>
-        <select class="jo-select" id="mEstado">
-          <option value="Activo" ${u && u.estado==='Activo' ? 'selected':''}>Activo</option>
-          <option value="Suspendido" ${u && u.estado==='Suspendido' ? 'selected':''}>Suspendido</option>
-        </select>
-      </div>`;
+      ${!u ? `
+      <div class="form-field"><label>Contraseña</label><input class="jo-input" id="mPassword" type="password" placeholder="Mínimo 8 caracteres"></div>
+      ` : ''}
+    `;
     abrirModal();
   }
 
-  function guardarUsuarioDesdeModal(){
+  async function guardarUsuarioDesdeModal(){
     const nombre = document.getElementById('mNombre').value.trim();
     const correo = document.getElementById('mCorreo').value.trim();
+    const telefono = document.getElementById('mTelefono').value.trim();
+
     if (!nombre || !correo) { alert('Nombre y correo son obligatorios.'); return false; }
-    const list = obtenerUsuarios();
-    if (modalContext.id){
-      const u = list.find(x => x.id === modalContext.id);
-      u.nombre = nombre; u.correo = correo;
-      u.telefono = document.getElementById('mTelefono').value.trim();
-      u.estado = document.getElementById('mEstado').value;
-      registrarActividad('Administrador', ADMIN.nombre, `Editó la cuenta de ${nombre}`);
-    } else {
-      list.push({ id:nuevoId(), nombre, correo, telefono: document.getElementById('mTelefono').value.trim(),
-        estado: document.getElementById('mEstado').value, fechaRegistro: Date.now() });
-      registrarActividad('Administrador', ADMIN.nombre, `Creó la cuenta de ${nombre}`);
+
+    try {
+      if (modalContext.id){
+        await editarUsuarioAdmin(modalContext.id, { nombre, correo, telefono });
+        registrarActividad('Administrador', ADMIN.nombre, `Editó la cuenta de ${nombre}`);
+      } else {
+        const passwordInput = document.getElementById('mPassword');
+        const password = passwordInput ? passwordInput.value : '';
+        if (!password || password.length < 8) { alert('La contraseña debe tener al menos 8 caracteres.'); return false; }
+        await crearUsuarioAdmin({ nombre, correo, telefono, password });
+        registrarActividad('Administrador', ADMIN.nombre, `Creó la cuenta de ${nombre}`);
+      }
+
+      await renderUsuarios(); renderActividad();
+      return true;
+
+    } catch (error) {
+      alert(error.message);
+      return false;
     }
-    guardarUsuarios(list);
-    renderUsuarios(); renderActividad();
-    return true;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1000,22 +964,24 @@
   // ══════════════════════════════════════════════════════════════
   function initInstituciones(){
     document.getElementById('btnNuevaInstitucion').addEventListener('click', () => abrirModalInstitucion(null));
-    document.getElementById('buscarInstitucion').addEventListener('input', renderInstituciones);
+    document.getElementById('buscarInstitucion').addEventListener('input', () => { renderInstituciones(); });
     document.getElementById('filtroEstadoInstitucion').addEventListener('change', (e) => {
       filtroEstadoInstActual = e.target.value; renderInstituciones();
     });
   }
 
-  function renderInstituciones(){
-    const todas = obtenerInstituciones();
+  async function renderInstituciones(){
+    const todas = await obtenerInstitucionesAdmin();
     document.getElementById('cntInstituciones').textContent = todas.length || '';
     const activas = todas.filter(i => i.estado === 'Activa').length;
+
+    const reportesTodos = await obtenerTodosLosReportesAdmin();
 
     document.getElementById('statsInstituciones').innerHTML = `
       <div class="statcard"><div class="statcard__label">Total</div><div class="statcard__value">${todas.length}</div></div>
       <div class="statcard statcard--resuelto"><div class="statcard__label">Activas</div><div class="statcard__value">${activas}</div></div>
       <div class="statcard statcard--pendiente"><div class="statcard__label">Suspendidas</div><div class="statcard__value">${todas.length-activas}</div></div>
-      <div class="statcard statcard--proceso"><div class="statcard__label">Reportes turnados</div><div class="statcard__value">${obtenerTodosLosReportes().length}</div></div>
+      <div class="statcard statcard--proceso"><div class="statcard__label">Reportes turnados</div><div class="statcard__value">${reportesTodos.length}</div></div>
     `;
 
     const q = document.getElementById('buscarInstitucion').value.trim().toLowerCase();
@@ -1029,7 +995,6 @@
       wrap.innerHTML = `<div class="empty"><div class="empty__title">Sin resultados</div><div class="empty__sub">Ajusta la búsqueda o el filtro.</div></div>`;
       return;
     }
-    const reportesTodos = obtenerTodosLosReportes();
 
     wrap.innerHTML = `
       <table class="datatable">
@@ -1051,57 +1016,190 @@
         </tbody>
       </table>`;
 
-    wrap.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () => abrirModalInstitucion(b.dataset.editar)));
-    wrap.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
-      const list = obtenerInstituciones();
-      const i = list.find(x => x.id === b.dataset.toggle);
-      i.estado = i.estado === 'Activa' ? 'Suspendida' : 'Activa';
-      guardarInstituciones(list);
-      registrarActividad('Administrador', ADMIN.nombre, `${i.estado === 'Suspendida' ? 'Suspendió' : 'Reactivó'} la institución ${i.nombre}`);
-      renderInstituciones(); renderActividad(); poblarFiltrosDeReporte();
+    wrap.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () => {
+      const inst = todas.find(x => x.id === b.dataset.editar);
+      abrirModalInstitucion(inst);
     }));
-    wrap.querySelectorAll('[data-eliminar]').forEach(b => b.addEventListener('click', () => {
-      if (!confirm('¿Eliminar esta institución? Los reportes turnados a ella quedarán sin asignar.')) return;
-      const list = obtenerInstituciones().filter(x => x.id !== b.dataset.eliminar);
-      guardarInstituciones(list);
-      registrarActividad('Administrador', ADMIN.nombre, 'Eliminó una institución');
-      renderInstituciones(); renderActividad(); poblarFiltrosDeReporte();
+    wrap.querySelectorAll('[data-toggle]').forEach(b =>
+      b.addEventListener('click', async () => {
+
+        const inst = todas.find(x => x.id === b.dataset.toggle);
+        if (!inst) return;
+
+        const nuevoEstado =
+          inst.estado === 'Activa'
+            ? 'Suspendida'
+            : 'Activa';
+
+        try {
+
+          await cambiarEstadoInstitucionAdmin(
+            inst.id,
+            nuevoEstado
+          );
+
+          registrarActividad(
+            'Administrador',
+            ADMIN.nombre,
+            `${nuevoEstado === 'Suspendida'
+              ? 'Suspendió'
+              : 'Reactivó'} la institución ${inst.nombre}`
+          );
+
+          await renderInstituciones();
+          renderActividad();
+          poblarFiltrosDeReporte();
+
+        } catch (err) {
+          alert(err.message);
+      }
+
+    }));
+    wrap.querySelectorAll('[data-eliminar]').forEach(b =>
+      b.addEventListener('click', async () => {
+
+        if (!confirm('¿Eliminar esta institución? Los reportes turnados a ella quedarán sin asignar.')) {
+          return;
+        }
+
+        try {
+
+          await eliminarInstitucionAdmin(
+            b.dataset.eliminar
+          );
+
+          registrarActividad(
+            'Administrador',
+            ADMIN.nombre,
+            'Eliminó una institución'
+          );
+
+          await renderInstituciones();
+          renderActividad();
+          poblarFiltrosDeReporte();
+
+        } catch (err) {
+          alert(err.message);
+        
+      }
+
     }));
   }
 
-  function abrirModalInstitucion(id){
-    const i = id ? obtenerInstituciones().find(x => x.id === id) : null;
-    modalContext = { tipo:'institucion', id };
+  function abrirModalInstitucion(i){
+    modalContext = { tipo:'institucion', id: i ? i.id : null };
     document.getElementById('modalTitle').textContent = i ? 'Editar institución' : 'Registrar institución';
     document.getElementById('modalBody').innerHTML = `
-      <div class="form-field"><label>Nombre / dependencia</label><input class="jo-input" id="mNombre" value="${i ? i.nombre : ''}"></div>
-      <div class="form-field"><label>Correo institucional</label><input class="jo-input" id="mCorreo" type="email" value="${i ? i.correo : ''}"></div>
-      <div class="form-field"><label>Estado</label>
+      <div class="form-field">
+        <label>Nombre / dependencia</label>
+        <input class="jo-input" id="mNombre" value="${i ? i.nombre : ''}">
+      </div>
+
+      <div class="form-field">
+        <label>Correo institucional</label>
+        <input class="jo-input" id="mCorreo" type="email" value="${i ? i.correo : ''}">
+      </div>
+
+      <div class="form-field">
+        <label>RFC</label>
+        <input class="jo-input" id="mRFC" value="${i ? i.rfc ?? '' : ''}">
+      </div>
+
+      ${
+        !i
+          ? `
+          <div class="form-field">
+            <label>Contraseña temporal</label>
+            <input class="jo-input" id="mPassword" type="password">
+          </div>
+          `
+          : ''
+      }
+
+      <div class="form-field">
+        <label>Estado</label>
         <select class="jo-select" id="mEstado">
-          <option value="Activa" ${i && i.estado==='Activa' ? 'selected':''}>Activa</option>
-          <option value="Suspendida" ${i && i.estado==='Suspendida' ? 'selected':''}>Suspendida</option>
+          <option value="Activa" ${i && i.estado === 'Activa' ? 'selected' : ''}>Activa</option>
+          <option value="Suspendida" ${i && i.estado === 'Suspendida' ? 'selected' : ''}>Suspendida</option>
         </select>
-      </div>`;
+      </div>
+    `;
     abrirModal();
   }
 
-  function guardarInstitucionDesdeModal(){
+  async function guardarInstitucionDesdeModal() {
+
     const nombre = document.getElementById('mNombre').value.trim();
-    const correo = document.getElementById('mCorreo').value.trim();
-    if (!nombre || !correo) { alert('Nombre y correo son obligatorios.'); return false; }
-    const list = obtenerInstituciones();
-    if (modalContext.id){
-      const i = list.find(x => x.id === modalContext.id);
-      i.nombre = nombre; i.tipo = nombre; i.correo = correo;
-      i.estado = document.getElementById('mEstado').value;
-      registrarActividad('Administrador', ADMIN.nombre, `Editó la institución ${nombre}`);
-    } else {
-      list.push({ id:nuevoId(), nombre, tipo:nombre, correo, estado: document.getElementById('mEstado').value, fechaRegistro: Date.now() });
-      registrarActividad('Administrador', ADMIN.nombre, `Registró la institución ${nombre}`);
+    const correo = document.getElementById('mCorreo').value.trim().toLowerCase();
+    const rfc = document.getElementById('mRFC').value.trim();
+    const estado = document.getElementById('mEstado').value;
+
+    if (!nombre || !correo || !rfc) {
+      alert('Nombre, correo y RFC son obligatorios.');
+      return false;
     }
-    guardarInstituciones(list);
-    renderInstituciones(); renderActividad(); poblarFiltrosDeReporte();
-    return true;
+
+    try {
+
+      if (modalContext.id) {
+
+        // Editar institución
+        await editarInstitucionAdmin(modalContext.id, {
+          nombre,
+          correo,
+          tipo: nombre,
+          rfc
+        });
+
+        await cambiarEstadoInstitucionAdmin(
+          modalContext.id,
+          estado
+        );
+
+        registrarActividad(
+          'Administrador',
+          ADMIN.nombre,
+          `Editó la institución ${nombre}`
+        );
+
+      } else {
+
+        const password = document.getElementById('mPassword').value.trim();
+
+        if (!password) {
+          alert('Debes escribir una contraseña temporal.');
+          return false;
+        }
+
+        await crearInstitucionAdmin({
+          nombre,
+          correo,
+          tipo: nombre,
+          rfc,
+          password
+        });
+
+        registrarActividad(
+          'Administrador',
+          ADMIN.nombre,
+          `Registró la institución ${nombre}`
+        );
+
+      }
+
+      await renderInstituciones();
+      renderActividad();
+      poblarFiltrosDeReporte();
+
+      return true;
+
+    } catch (err) {
+
+      alert(err.message);
+      return false;
+
+    }
+
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1119,20 +1217,22 @@
     document.getElementById('filtroInstitucionReporte').addEventListener('change', renderReportesAdmin);
   }
 
-  function poblarFiltrosDeReporte(){
+  async function poblarFiltrosDeReporte(){
     const selCat = document.getElementById('filtroCategoriaReporte');
     const selInst = document.getElementById('filtroInstitucionReporte');
     const catVal = selCat.value, instVal = selInst.value;
+    const instituciones = await obtenerInstitucionesAdmin();
+    const categorias = await obtenerCategoriasAdmin();
     selCat.innerHTML = '<option value="Todas">Todas las categorías</option>' +
-      obtenerCategorias().map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+      categorias.map(c => `<option value="${c.clave}">${c.nombre}</option>`).join('');
     selInst.innerHTML = '<option value="Todas">Todas las instituciones</option>' +
-      obtenerInstituciones().map(i => `<option value="${i.tipo}">${i.tipo}</option>`).join('');
+      instituciones.map(i => `<option value="${i.tipo}">${i.tipo}</option>`).join('');
     if ([...selCat.options].some(o => o.value === catVal)) selCat.value = catVal;
     if ([...selInst.options].some(o => o.value === instVal)) selInst.value = instVal;
   }
 
-  function renderReportesAdmin(){
-    const todos = obtenerTodosLosReportes();
+  async function renderReportesAdmin(){
+    const todos = await obtenerTodosLosReportes();
     document.getElementById('cntReportes').textContent = todos.length || '';
 
     const pend = todos.filter(r => r.estado === 'Pendiente').length;
@@ -1178,12 +1278,12 @@
         </div>`;
     }).join('');
 
-    lista.querySelectorAll('.rep-card').forEach(card => card.addEventListener('click', () => abrirDetalleReporte(card.dataset.id)));
+    lista.querySelectorAll('.rep-card').forEach(card => card.addEventListener('click', async () => await abrirDetalleReporte(card.dataset.id)));
   }
 
-  function renderAsignacion(){
-    const todos = obtenerTodosLosReportes();
-    const sinAsignar = todos.filter(r => !r.institucionAsignada || r.estado === 'Pendiente');
+  async function renderAsignacion(){
+    const todos = await obtenerTodosLosReportes();
+    const sinAsignar = todos.filter(r => !r.institucionAsignada);
     document.getElementById('cntAsignacion').textContent = sinAsignar.length || '';
 
     const wrap = document.getElementById('listaAsignacionWrap');
@@ -1191,13 +1291,14 @@
       wrap.innerHTML = `<div class="empty"><div class="empty__title">Todo turnado ✅</div><div class="empty__sub">No hay reportes pendientes de asignación en este momento.</div></div>`;
       return;
     }
-    const instituciones = obtenerInstituciones().filter(i => i.estado === 'Activa');
+    const instituciones = (await obtenerInstitucionesAdmin()).filter(i => i.estado === 'Activa');
+    const categorias = await obtenerCategoriasAdmin();
     wrap.innerHTML = `
       <table class="datatable">
         <thead><tr><th>Categoría</th><th>Dirección</th><th>Estado actual</th><th>Institución sugerida</th><th>Turnar a</th></tr></thead>
         <tbody>
           ${sinAsignar.map(r => {
-            const cat = obtenerCategorias().find(c => c.nombre === r.categoria);
+            const cat = categorias.find(c => c.clave === r.categoria);
             const sugerida = cat ? cat.institucion : '—';
             return `
             <tr>
@@ -1218,70 +1319,73 @@
       </table>`;
 
     wrap.querySelectorAll('[data-asignar-btn]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.dataset.asignarBtn;
         const select = wrap.querySelector(`[data-asignar-select="${id}"]`);
         const destino = select.value;
         if (!destino) { alert('Elige una institución antes de asignar.'); return; }
-        asignarReporteAInstitucion(id, destino);
-        registrarActividad('Administrador', ADMIN.nombre, `Asignó manualmente un reporte a ${destino}`);
-        renderTodo();
+        try {
+          await asignarReporteAInstitucion(id, destino);
+          registrarActividad('Administrador', ADMIN.nombre, `Asignó manualmente un reporte a ${destino}`);
+          await renderTodo();
+        } catch (error) {
+          alert(error.message);
+        }
       });
     });
   }
 
-  function asignarReporteAInstitucion(reporteId, institucionTipo){
-    // ✅ CORREGIDO: la propiedad correcta en los objetos de reporte
-    // (definida en institucion.js) es "institucionAsignada", no
-    // "institucionTipo". Se ajusta en las tres rutas posibles:
-    if (typeof asignarInstitucionAReporte === 'function'){
-      asignarInstitucionAReporte(reporteId, institucionTipo);
-    } else if (typeof obtenerReportePorId === 'function' && typeof _guardarReportes !== 'undefined'){
-      const r = obtenerReportePorId(reporteId);
-      if (r){
-        r.institucionAsignada = institucionTipo;
-        r.fechaActualizacion = Date.now();
-        // Persistimos usando el mismo store que institucion.js (jo_reportes)
-        const reportes = leerLS('jo_reportes', []);
-        const idx = reportes.findIndex(x => x.id === reporteId);
-        if (idx !== -1){ reportes[idx] = r; escribirLS('jo_reportes', reportes); }
-      }
-    } else {
-      const list = leerLS('joAdmin_reportes_fallback', []);
-      const r = list.find(x => x.id === reporteId);
-      if (r) r.institucionAsignada = institucionTipo;
-      escribirLS('joAdmin_reportes_fallback', list);
-    }
+  async function asignarReporteAInstitucion(reporteId, institucionTipo){
+    await asignarInstitucionReporteAdmin(reporteId, institucionTipo);
   }
 
   // ── panel de detalle (reutilizando patrón de institucion_dashboard) ──
   function initDetailPanel(){
     document.getElementById('overlay').addEventListener('click', cerrarDetalleReporte);
     document.getElementById('detailClose').addEventListener('click', cerrarDetalleReporte);
-    document.getElementById('detailEstadoSelect').addEventListener('change', (e) => {
+
+    document.getElementById('detailEstadoSelect').addEventListener('change', async (e) => {
       if (!reporteActivoId) return;
-      if (typeof cambiarEstadoReporte === 'function') cambiarEstadoReporte(reporteActivoId, e.target.value);
-      registrarActividad('Administrador', ADMIN.nombre, `Cambió el estado de un reporte a "${e.target.value}"`);
-      renderTodo();
+      try {
+        await cambiarEstadoReporteAdmin(reporteActivoId, e.target.value);
+        registrarActividad('Administrador', ADMIN.nombre, `Cambió el estado de un reporte a "${e.target.value}"`);
+        await renderTodo();
+      } catch (error) {
+        alert(error.message);
+      }
     });
-    document.getElementById('detailInstSelect').addEventListener('change', (e) => {
+
+    document.getElementById('detailInstSelect').addEventListener('change', async (e) => {
       if (!reporteActivoId) return;
-      asignarReporteAInstitucion(reporteActivoId, e.target.value);
-      registrarActividad('Administrador', ADMIN.nombre, `Reasignó un reporte a ${e.target.value}`);
-      renderTodo();
+      try {
+        await asignarReporteAInstitucion(reporteActivoId, e.target.value);
+        registrarActividad('Administrador', ADMIN.nombre, `Reasignó un reporte a ${e.target.value}`);
+        await renderTodo();
+      } catch (error) {
+        alert(error.message);
+      }
     });
-    document.getElementById('detailEliminarBtn').addEventListener('click', () => {
+
+    // 👇 CORREGIDO: antes no eliminaba nada de verdad, solo registraba
+    // la actividad y cerraba el panel. Ahora sí llama al backend.
+    document.getElementById('detailEliminarBtn').addEventListener('click', async () => {
       if (!reporteActivoId) return;
       if (!confirm('¿Eliminar este reporte de forma permanente?')) return;
-      registrarActividad('Administrador', ADMIN.nombre, 'Eliminó un reporte');
-      cerrarDetalleReporte();
-      renderTodo();
+      try {
+        await eliminarReporteAdmin(reporteActivoId);
+        registrarActividad('Administrador', ADMIN.nombre, 'Eliminó un reporte');
+        cerrarDetalleReporte();
+        await renderTodo();
+      } catch (error) {
+        alert(error.message);
+      }
     });
   }
 
-  function abrirDetalleReporte(id){
+  async function abrirDetalleReporte(id){
     reporteActivoId = id;
-    const r = (typeof obtenerReportePorId === 'function') ? obtenerReportePorId(id) : obtenerTodosLosReportes().find(x => x.id === id);
+    const todos = await obtenerTodosLosReportes();
+    const r = todos.find(x => x.id === id);
     if (!r) return;
     document.getElementById('detailBadge').textContent = r.estado;
     document.getElementById('detailBadge').className = 'badge ' + BADGE_CLASE[r.estado];
@@ -1290,10 +1394,10 @@
     document.getElementById('detailDesc').textContent = r.descripcion || 'Sin descripción adicional.';
     document.getElementById('detailEstadoSelect').value = r.estado;
 
+    const instituciones = await obtenerInstitucionesAdmin();
     const selInst = document.getElementById('detailInstSelect');
     selInst.innerHTML = '<option value="">Sin asignar</option>' +
-      obtenerInstituciones().map(i => `<option value="${i.tipo}" ${i.tipo===r.institucionAsignada?'selected':''}>${i.tipo}</option>`).join('');
-
+      instituciones.map(i => `<option value="${i.tipo}" ${i.tipo===r.institucionAsignada?'selected':''}>${i.tipo}</option>`).join('');
     document.getElementById('overlay').classList.add('is-open');
     document.getElementById('detailPanel').classList.add('is-open');
   }
@@ -1335,121 +1439,127 @@
   // 6) CONFIGURAR CATEGORÍAS
   // ══════════════════════════════════════════════════════════════
   function initCategorias(){
-    document.getElementById('btnNuevaCategoria').addEventListener('click', () => abrirModalCategoria(null));
+    document.getElementById('btnNuevaCategoria').addEventListener('click', async () => await abrirModalCategoria(null));
   }
 
-  function renderCategorias(){
-    const cats = obtenerCategorias();
+  
+  async function renderCategorias(){
+    let cats;
+    try {
+      cats = await obtenerCategoriasAdmin();
+    } catch (error) {
+      document.getElementById('chipGridCategorias').innerHTML =
+        `<div class="empty"><div class="empty__title">Error al cargar categorías</div><div class="empty__sub">${error.message}</div></div>`;
+      return;
+    }
+
     const grid = document.getElementById('chipGridCategorias');
     const conteo = {};
-    obtenerTodosLosReportes().forEach(r => conteo[r.categoria] = (conteo[r.categoria]||0)+1);
+    const reportes = await obtenerTodosLosReportes();
+    reportes.forEach(r => conteo[r.categoria] = (conteo[r.categoria]||0)+1);
 
     grid.innerHTML = cats.map(c => `
       <div class="chip-card">
         <div class="chip-card__top">
-          <span class="chip-dot" style="background:${c.color}"></span>
+          <span class="chip-dot" style="background:${c.color}">${ICONOS_CATEGORIA[c.icono] || '📍'}</span>
           <span class="chip-card__nombre">${c.nombre}</span>
         </div>
         <div class="chip-card__meta">Se turna a ${c.institucion}</div>
-        <div class="chip-card__meta">${conteo[c.nombre]||0} reportes registrados</div>
+        <div class="chip-card__meta">${conteo[c.clave]||0} reportes registrados</div>
         <div class="chip-card__actions">
-          <button class="btn btn--ghost btn--sm" data-editar-cat="${c.id}">Editar</button>
-          <button class="btn btn--danger btn--sm" data-eliminar-cat="${c.id}">Eliminar</button>
+          <button class="btn btn--ghost btn--sm" data-editar-cat="${c._id}">Editar</button>
+          <button class="btn btn--danger btn--sm" data-eliminar-cat="${c._id}">Eliminar</button>
         </div>
       </div>`).join('');
 
-    grid.querySelectorAll('[data-editar-cat]').forEach(b => b.addEventListener('click', () => abrirModalCategoria(b.dataset.editarCat)));
-    grid.querySelectorAll('[data-eliminar-cat]').forEach(b => b.addEventListener('click', () => {
-      if (!confirm('¿Eliminar esta categoría?')) return;
-      guardarCategorias(obtenerCategorias().filter(c => c.id !== b.dataset.eliminarCat));
-      registrarActividad('Administrador', ADMIN.nombre, 'Eliminó una categoría de reporte');
-      renderCategorias(); renderActividad(); poblarFiltrosDeReporte();
+    grid.querySelectorAll('[data-editar-cat]').forEach(b => b.addEventListener('click', async () => {
+      const c = cats.find(x => x._id === b.dataset.editarCat);
+      await abrirModalCategoria(c);
+    }));
+    grid.querySelectorAll('[data-eliminar-cat]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar esta categoría? Los reportes que ya la tienen asignada la conservan en su historial, pero no se les podrá crear a ciudadanos nuevos con este tipo.')) return;
+      try {
+        await eliminarCategoriaAdmin(b.dataset.eliminarCat);
+        registrarActividad('Administrador', ADMIN.nombre, 'Eliminó una categoría de reporte');
+        await renderCategorias(); renderActividad(); await poblarFiltrosDeReporte();
+      } catch (error) {
+        alert(error.message);
+      }
     }));
   }
 
-  function abrirModalCategoria(id){
-    const c = id ? obtenerCategorias().find(x => x.id === id) : null;
-    modalContext = { tipo:'categoria', id };
+  async function abrirModalCategoria(c){
+    modalContext = { tipo:'categoria', id: c ? c._id : null };
+    const instituciones = await obtenerInstitucionesAdmin();
     document.getElementById('modalTitle').textContent = c ? 'Editar categoría' : 'Nueva categoría';
     document.getElementById('modalBody').innerHTML = `
       <div class="form-field"><label>Nombre</label><input class="jo-input" id="mNombre" value="${c ? c.nombre : ''}"></div>
+      ${c ? `<div class="form-hint">Clave interna: <code>${c.clave}</code> (no cambia al editar el nombre)</div>` : ''}
       <div class="form-field"><label>Color en el mapa</label><input class="jo-input" id="mColor" type="color" value="${c ? c.color : '#993C1D'}" style="height:40px;padding:4px;"></div>
+      <div class="form-field">
+        <label>Ícono</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${Object.entries(ICONOS_CATEGORIA).map(([key, emoji]) => `
+            <label style="cursor:pointer;">
+              <input type="radio" name="mIcono" value="${key}" ${c && c.icono===key ? 'checked' : (!c && key==='generico' ? 'checked' : '')} style="display:none;">
+              <span class="icono-opcion" data-icono="${key}" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:8px;border:2px solid var(--jo-line);font-size:18px;">${emoji}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
       <div class="form-field"><label>Institución por defecto</label>
         <select class="jo-select" id="mInstitucion">
-          ${obtenerInstituciones().map(i => `<option value="${i.tipo}" ${c && c.institucion===i.tipo?'selected':''}>${i.tipo}</option>`).join('')}
+          ${instituciones.map(i => `<option value="${i.tipo}" ${c && c.institucion===i.tipo?'selected':''}>${i.tipo}</option>`).join('')}
         </select>
       </div>`;
+
+    // Resalta el ícono ya seleccionado y actualiza al hacer clic
+    const marcarSeleccionado = () => {
+      document.querySelectorAll('.icono-opcion').forEach(el => {
+        const radio = el.previousElementSibling;
+        el.style.borderColor = radio.checked ? 'var(--jo-ink)' : 'var(--jo-line)';
+        el.style.background = radio.checked ? 'var(--jo-line-soft)' : '#fff';
+      });
+    };
+    document.querySelectorAll('input[name="mIcono"]').forEach(r => r.addEventListener('change', marcarSeleccionado));
+    marcarSeleccionado();
+
     abrirModal();
   }
 
-  function guardarCategoriaDesdeModal(){
+  async function guardarCategoriaDesdeModal(){
     const nombre = document.getElementById('mNombre').value.trim();
+    const color = document.getElementById('mColor').value;
+    const icono = document.querySelector('input[name="mIcono"]:checked')?.value || 'generico';
+    const institucion = document.getElementById('mInstitucion').value;
+
     if (!nombre) { alert('El nombre es obligatorio.'); return false; }
-    const list = obtenerCategorias();
-    if (modalContext.id){
-      const c = list.find(x => x.id === modalContext.id);
-      c.nombre = nombre; c.color = document.getElementById('mColor').value; c.institucion = document.getElementById('mInstitucion').value;
-      registrarActividad('Administrador', ADMIN.nombre, `Editó la categoría "${nombre}"`);
-    } else {
-      list.push({ id:nuevoId(), nombre, color: document.getElementById('mColor').value, institucion: document.getElementById('mInstitucion').value });
-      registrarActividad('Administrador', ADMIN.nombre, `Creó la categoría "${nombre}"`);
+
+    try {
+      if (modalContext.id){
+        await editarCategoriaAdmin(modalContext.id, { nombre, color, icono, institucion });
+        registrarActividad('Administrador', ADMIN.nombre, `Editó la categoría "${nombre}"`);
+      } else {
+        await crearCategoriaAdmin({ nombre, color, icono, institucion });
+        registrarActividad('Administrador', ADMIN.nombre, `Creó la categoría "${nombre}"`);
+      }
+
+      await renderCategorias(); renderActividad(); await poblarFiltrosDeReporte();
+      return true;
+
+    } catch (error) {
+      alert(error.message);
+      return false;
     }
-    guardarCategorias(list);
-    renderCategorias(); renderActividad(); poblarFiltrosDeReporte();
-    return true;
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  // 7) GESTIONAR PERMISOS
-  // ══════════════════════════════════════════════════════════════
-  const PERMISOS_COLS = [
-    ['usuarios','Usuarios'], ['instituciones','Instituciones'], ['reportes','Reportes'],
-    ['asignar','Asignar'], ['actividad','Actividad'], ['categorias','Categorías'],
-    ['permisos','Permisos'], ['estadisticas','Estadísticas'], ['parametros','Parámetros']
-  ];
-
-  function initPermisos(){}
-
-  function renderPermisos(){
-    const permisos = obtenerPermisos();
-    const wrap = document.getElementById('permisosTableWrap');
-    wrap.innerHTML = `
-      <table class="perm-table">
-        <thead><tr><th>Rol</th>${PERMISOS_COLS.map(([,label]) => `<th>${label}</th>`).join('')}</tr></thead>
-        <tbody>
-          ${permisos.map((p) => `
-            <tr>
-              <td>${p.rol}${p.fijo ? ' <span class="cell-muted" style="font-family:var(--font-mono);font-size:10px;">(fijo)</span>' : ''}</td>
-              ${PERMISOS_COLS.map(([key]) => `
-                <td>
-                  <label class="toggle">
-                    <input type="checkbox" data-perm-rol="${p.rol}" data-perm-key="${key}" ${p[key] ? 'checked' : ''} ${p.fijo ? 'disabled' : ''}>
-                    <span class="toggle__track"></span>
-                  </label>
-                </td>`).join('')}
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-
-    wrap.querySelectorAll('[data-perm-rol]').forEach(chk => {
-      chk.addEventListener('change', () => {
-        const list = obtenerPermisos();
-        const p = list.find(x => x.rol === chk.dataset.permRol);
-        p[chk.dataset.permKey] = chk.checked;
-        guardarPermisos(list);
-        registrarActividad('Administrador', ADMIN.nombre, `Actualizó permisos de "${p.rol}"`);
-        renderActividad();
-      });
-    });
   }
 
   // ══════════════════════════════════════════════════════════════
   // 8) ESTADÍSTICAS GLOBALES
   // ══════════════════════════════════════════════════════════════
-  function renderEstadisticasGlobales(){
-    const reportes = obtenerTodosLosReportes();
-    const usuarios = obtenerUsuarios();
-    const instituciones = obtenerInstituciones();
+  async function renderEstadisticasGlobales(){
+    const reportes = await obtenerTodosLosReportes();
+    const usuarios = await obtenerUsuariosAdmin();
+    const instituciones = await obtenerInstitucionesAdmin();
 
     document.getElementById('statsGlobales').innerHTML = `
       <div class="statcard"><div class="statcard__label">Reportes totales</div><div class="statcard__value">${reportes.length}</div></div>
@@ -1471,14 +1581,16 @@
       </div>`).join('') || '<p style="color:#847f97;font-size:13px;">Sin datos aún.</p>';
 
     // por categoría
+    const categoriasReales = await obtenerCategoriasAdmin();
     const porCat = {};
     reportes.forEach(r => porCat[r.categoria] = (porCat[r.categoria]||0)+1);
     const maxCat = Math.max(1, ...Object.values(porCat));
     document.getElementById('barCategoriasGlobal').innerHTML = Object.entries(porCat).map(([k,v]) => {
-      const c = obtenerCategorias().find(x => x.nombre === k);
+      const c = categoriasReales.find(x => x.clave === k);
+      const etiqueta = c ? c.nombre : k;
       return `
       <div class="bar-row">
-        <div class="bar-row__label">${k}</div>
+        <div class="bar-row__label">${etiqueta}</div>
         <div class="bar-row__track"><div class="bar-row__fill" style="width:${(v/maxCat)*100}%;background:${c ? c.color : 'var(--jo-steel)'};"></div></div>
         <div class="bar-row__val">${v}</div>
       </div>`;
@@ -1518,8 +1630,15 @@
   // ══════════════════════════════════════════════════════════════
   // 9) CONFIGURAR PARÁMETROS DEL SISTEMA
   // ══════════════════════════════════════════════════════════════
-  function initParametros(){
-    const p = obtenerParametros();
+  async function initParametros(){
+    let p;
+    try {
+      p = await obtenerParametrosAdmin();
+    } catch (error) {
+      alert(error.message);
+      p = {};
+    }
+
     document.getElementById('parNombrePlataforma').value = p.nombrePlataforma || '';
     document.getElementById('parCorreoSoporte').value = p.correoSoporte || '';
     document.getElementById('parTiempoLimite').value = p.tiempoLimiteHoras || 72;
@@ -1528,7 +1647,7 @@
     document.getElementById('parRegistroAbierto').checked = p.registroAbierto !== false;
     document.getElementById('parNotifCorreo').checked = p.notifCorreo !== false;
 
-    document.getElementById('btnGuardarParametros').addEventListener('click', () => {
+    document.getElementById('btnGuardarParametros').addEventListener('click', async () => {
       const nuevos = {
         nombrePlataforma: document.getElementById('parNombrePlataforma').value.trim() || 'Juárez Observa',
         correoSoporte: document.getElementById('parCorreoSoporte').value.trim(),
@@ -1538,12 +1657,17 @@
         registroAbierto: document.getElementById('parRegistroAbierto').checked,
         notifCorreo: document.getElementById('parNotifCorreo').checked,
       };
-      guardarParametros(nuevos);
-      registrarActividad('Administrador', ADMIN.nombre, 'Actualizó los parámetros del sistema');
-      renderActividad();
-      const msg = document.getElementById('parametrosGuardadoMsg');
-      msg.style.display = 'inline';
-      setTimeout(() => msg.style.display = 'none', 2500);
+
+      try {
+        await guardarParametrosAdmin(nuevos);
+        registrarActividad('Administrador', ADMIN.nombre, 'Actualizó los parámetros del sistema');
+        renderActividad();
+        const msg = document.getElementById('parametrosGuardadoMsg');
+        msg.style.display = 'inline';
+        setTimeout(() => msg.style.display = 'none', 2500);
+      } catch (error) {
+        alert(error.message);
+      }
     });
   }
 
@@ -1554,11 +1678,11 @@
     document.getElementById('modalClose').addEventListener('click', cerrarModal);
     document.getElementById('modalCancelar').addEventListener('click', cerrarModal);
     document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') cerrarModal(); });
-    document.getElementById('modalGuardar').addEventListener('click', () => {
+    document.getElementById('modalGuardar').addEventListener('click', async () => {
       let ok = false;
-      if (modalContext.tipo === 'usuario') ok = guardarUsuarioDesdeModal();
-      if (modalContext.tipo === 'institucion') ok = guardarInstitucionDesdeModal();
-      if (modalContext.tipo === 'categoria') ok = guardarCategoriaDesdeModal();
+      if (modalContext.tipo === 'usuario') ok = await guardarUsuarioDesdeModal();
+      if (modalContext.tipo === 'institucion') ok = await guardarInstitucionDesdeModal();
+      if (modalContext.tipo === 'categoria') ok = await guardarCategoriaDesdeModal();
       if (ok) cerrarModal();
     });
   }

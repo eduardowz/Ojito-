@@ -30,7 +30,40 @@ const usuarioSchema = new mongoose.Schema({
         default: "ciudadano"
     },
 
-    // 👇 Historial de actividad del usuario (eventos que no vienen
+    estado: {
+        type: String,
+        enum: ["Activo", "Suspendido"],
+        default: "Activo"
+    },
+
+    // 👇 NUEVO: verificación de correo al registrarse
+    verificado: {
+        type: Boolean,
+        default: false
+    },
+
+    codigoVerificacion: {
+        type: String,
+        default: null
+    },
+
+    codigoVerificacionExpira: {
+        type: Date,
+        default: null
+    },
+
+    // Recuperación de contraseña real
+    codigoRecuperacion: {
+        type: String,
+        default: null
+    },
+
+    codigoExpira: {
+        type: Date,
+        default: null
+    },
+
+    // Historial de actividad del usuario (eventos que no vienen
     // implícitos de la colección de reportes, como eliminaciones)
     historial: [{
         mensaje: {
@@ -47,4 +80,4 @@ const usuarioSchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model("Usuario", usuarioSchema)
+module.exports = mongoose.model("Usuario", usuarioSchema);

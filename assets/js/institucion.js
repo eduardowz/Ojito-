@@ -12,13 +12,6 @@ const TIPOS_INSTITUCION = [
   'Parques y Jardines'
 ];
 
-// ══════════════════════════════════════════════════════════════
-// Fallback SOLO para reportes viejos que se hayan creado antes de
-// que crearReporte() asignara `institucion` en el servidor (se
-// quedaron con institucion: ""). Todo reporte nuevo ya trae el
-// campo lleno desde el backend, así que este mapeo debería dejar
-// de usarse con el tiempo. No lo uses para nada más.
-// ══════════════════════════════════════════════════════════════
 const TIPO_A_INSTITUCION_FALLBACK = {
   bache: 'Obras Públicas',
   alumbrado: 'Alumbrado Público',
@@ -97,42 +90,31 @@ async function verificarCredencialesInstitucion(correo, password) {
   const passwordHash = await hashPassword(password);
 
   const respuesta = await fetch(`${API_BASE}/instituciones/login`, {
-
     method: "POST",
-
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify({
-      correo: correo.trim().toLowerCase(),
-      passwordHash
-    })
-
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: correo.trim().toLowerCase(), passwordHash })
   });
-
 
   if (!respuesta.ok) {
     return null;
   }
 
-
   const datos = await respuesta.json();
 
-  return datos.institucion;
-
+  return { institucion: datos.institucion, token: datos.token };
 }
 
 // ══════════════════════════════════════════════════════════════
 // SESIÓN DE INSTITUCIÓN (localStorage está bien aquí — es sesión
 // del cliente, no datos de reportes)
 // ══════════════════════════════════════════════════════════════
-function crearSesionInstitucion(institucion) {
+function crearSesionInstitucion(institucion, token) {
   const sesion = {
     correo: institucion.correo,
-    nombreInstitucion: institucion.nombre,
+    nombreInstitucion: institucion.nombreInstitucion,
     tipo: institucion.tipo,
     rol: 'institucion',
+    token,
     expira: Date.now() + (8 * 60 * 60 * 1000)
   };
   localStorage.setItem('jo_sesion_institucion', JSON.stringify(sesion));
@@ -168,7 +150,9 @@ function cerrarSesionInstitucion(redirectUrl = 'institucion_login.html') {
 // ══════════════════════════════════════════════════════════════
 
 async function _fetchTodosLosReportes() {
-  const respuesta = await fetch(`${API_BASE}/reportes`);
+  // La institución necesita ver TODOS los estados (incluido resuelto),
+  // a diferencia del mapa público del ciudadano que los oculta por default.
+  const respuesta = await fetch(`${API_BASE}/reportes?incluirResueltos=true`);
   if (!respuesta.ok) {
     throw new Error('No se pudieron cargar los reportes del servidor.');
   }
@@ -210,12 +194,13 @@ async function obtenerReportesPorInstitucion(tipo) {
 }
 
 async function obtenerReportePorId(id) {
-  // Nota: trae todos los reportes y filtra en el cliente porque no hay
-  // GET /api/reportes/:id dedicado. Si el volumen de reportes crece
-  // mucho, conviene agregar esa ruta en el backend.
-  const reportes = await _fetchTodosLosReportes();
-  const r = reportes.find(x => x._id === id);
-  return r ? _mapearReporte(r) : null;
+  const respuesta = await fetch(`${API_BASE}/reportes/${id}`);
+  if (respuesta.status === 404) return null;
+  if (!respuesta.ok) {
+    throw new Error('No se pudo obtener el reporte.');
+  }
+  const r = await respuesta.json();
+  return _mapearReporte(r);
 }
 
 async function cambiarEstadoReporte(id, nuevoEstado) {
@@ -223,9 +208,14 @@ async function cambiarEstadoReporte(id, nuevoEstado) {
     throw new Error('Estado de reporte no válido.');
   }
 
+  const sesion = obtenerSesionInstitucion();
+
   const respuesta = await fetch(`${API_BASE}/reportes/${id}/estado`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${sesion?.token}`
+    },
     body: JSON.stringify({
       estado: nuevoEstado,
       progreso: PROGRESO_POR_ESTADO[nuevoEstado],
@@ -256,9 +246,14 @@ async function agregarAvance(id, { texto = '', foto = '' } = {}, autor = 'Instit
     throw new Error('Agrega un texto o una foto de evidencia.');
   }
 
+  const sesion = obtenerSesionInstitucion();
+
   const respuesta = await fetch(`${API_BASE}/reportes/${id}/bitacora`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${sesion?.token}`
+    },
     body: JSON.stringify({ texto, foto, autor }),
   });
 

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifica tu cuenta · Juárez Observa</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/recover.css">
+</head>
+<body>
+
+<div class="auth">
+
+  <!-- ============ PANEL DE MARCA ============ -->
+  <section class="auth__showcase">
+    <div class="watch-grid" id="verificarGrid" aria-hidden="true">
+      <div class="watch-grid__lines"></div>
+      <div class="watch-grid__glow"></div>
+    </div>
+
+    <div class="auth__showcase-content">
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <p class="auth__eyebrow" style="margin-top:40px;">Un último paso</p>
+      <h1 class="auth__headline">Confirma que <em>eres tú.</em></h1>
+      <p class="auth__lede">
+        Te enviamos un código de 6 dígitos a tu correo para activar tu cuenta
+        y empezar a reportar incidentes en tu colonia.
+      </p>
+    </div>
+
+    <div class="auth__stats">
+      <div>
+        <div class="auth__stat-value">13</div>
+        <div class="auth__stat-label">Categorías de reporte</div>
+      </div>
+      <div>
+        <div class="auth__stat-value">72 h</div>
+        <div class="auth__stat-label">Tiempo promedio de 1ª respuesta</div>
+      </div>
+      <div>
+        <div class="auth__stat-value">100%</div>
+        <div class="auth__stat-label">Cuentas verificadas por correo</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANEL DE FORMULARIO ============ -->
+  <section class="auth__panel">
+    <div class="auth__form-wrap">
+
+      <span class="brand">
+        <span class="brand__mark"></span>
+        <span><span class="brand__juarez">Juárez</span> <span class="brand__observa">Observa</span></span>
+      </span>
+
+      <h2 class="auth__title">Verifica tu correo</h2>
+      <p class="auth__subtitle">Ingresa el código de 6 dígitos que enviamos a tu correo.</p>
+
+      <div class="alert" id="verificarAlert"></div>
+
+      <!-- ══ PANEL: CÓDIGO ══ -->
+      <div class="recover-panel recover-panel--active" id="panelCodigo">
+        <div class="info-box" id="infoCorreoEnviado">
+          <span>✅</span>
+          <div>Enviamos un código de 6 dígitos a <strong id="correoDestino"></strong>. Revisa tu bandeja de entrada (y spam, por si acaso).</div>
+        </div>
+
+        <form action="javascript:void(0)" novalidate>
+          <div class="field" id="campoCodigo">
+            <label>Código de verificación</label>
+            <div class="code-inputs" id="codeInputs">
+              <input type="text" maxlength="1" id="c0" inputmode="numeric">
+              <input type="text" maxlength="1" id="c1" inputmode="numeric">
+              <input type="text" maxlength="1" id="c2" inputmode="numeric">
+              <input type="text" maxlength="1" id="c3" inputmode="numeric">
+              <input type="text" maxlength="1" id="c4" inputmode="numeric">
+              <input type="text" maxlength="1" id="c5" inputmode="numeric">
+            </div>
+            <span class="field-error" id="errorCodigo"></span>
+          </div>
+
+          <div class="resend-row">
+            ¿No llegó el código?
+            <button type="button" id="btnReenviar" onclick="reenviarCodigo()" disabled>
+              Reenviar en <span id="countdownReenvio">30</span>s
+            </button>
+          </div>
+
+          <button type="button" class="btn btn--primary btn--block" style="margin-top:20px;"
+                  onclick="verificarCuenta()">
+            Verificar cuenta
+          </button>
+        </form>
+
+        <a href="registro.html" class="back-link">← Usar otro correo</a>
+      </div>
+
+      <!-- ══ PANEL: ÉXITO ══ -->
+      <div class="recover-panel" id="panelExito">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">¡Cuenta verificada!</div>
+        <p class="success-text">
+          Tu cuenta ha sido activada correctamente.<br>
+          Ya puedes iniciar sesión.
+        </p>
+        <a href="login.html" class="btn btn--primary btn--block" style="text-align:center; text-decoration:none;">
+          Ir al inicio de sesión
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<script src="assets/js/app.js"></script>
+<script>
+
+  // ══════════════════════════════════════════════════════════════
+  // ESTADO — el correo viene por query string desde registro.html
+  // ══════════════════════════════════════════════════════════════
+  const _params    = new URLSearchParams(window.location.search);
+  let _correoUser  = (_params.get('correo') || '').trim();
+  let _timerReenvio = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+
+    pintarRetícula('verificarGrid', 16);
+
+    if (!_correoUser) {
+      // No llegó correo por la URL — probablemente entraron directo a la página.
+      const alerta = document.getElementById('verificarAlert');
+      mostrarAlerta(alerta, 'No encontramos el correo a verificar. Regístrate de nuevo o inicia sesión.', 'error');
+      document.querySelector('#panelCodigo .btn--primary').disabled = true;
+    } else {
+      document.getElementById('correoDestino').textContent = _correoUser;
+    }
+
+    iniciarCountdownReenvio();
+
+    // Inputs del código: auto-avance, backspace, pegado
+    const celdas = document.querySelectorAll('.code-inputs input');
+    celdas.forEach((celda, idx) => {
+      celda.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/\D/g, '');
+        celda.value = val;
+        celda.classList.toggle('filled', val !== '');
+        if (val && idx < celdas.length - 1) celdas[idx + 1].focus();
+      });
+
+      celda.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !celda.value && idx > 0) {
+          celdas[idx - 1].focus();
+          celdas[idx - 1].value = '';
+          celdas[idx - 1].classList.remove('filled');
+        }
+      });
+
+      celda.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const texto = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        texto.split('').forEach((ch, i) => {
+          if (celdas[i]) {
+            celdas[i].value = ch;
+            celdas[i].classList.add('filled');
+          }
+        });
+        const siguiente = celdas[Math.min(texto.length, celdas.length - 1)];
+        if (siguiente) siguiente.focus();
+      });
+    });
+
+    if (_correoUser) celdas[0].focus();
+  });
+
+  function obtenerCodigoIngresado() {
+    return ['c0','c1','c2','c3','c4','c5']
+      .map(id => document.getElementById(id).value)
+      .join('');
+  }
+
+  function limpiarCeldas() {
+    ['c0','c1','c2','c3','c4','c5'].forEach(id => {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.classList.remove('filled');
+    });
+  }
+
+  // ── Reenvío con countdown (mismo patrón que recuperar.html) ───
+  function iniciarCountdownReenvio() {
+    const btn      = document.getElementById('btnReenviar');
+    const spanSecs = document.getElementById('countdownReenvio');
+    let secs       = 30;
+
+    btn.disabled         = true;
+    spanSecs.textContent = secs;
+
+    if (_timerReenvio) clearInterval(_timerReenvio);
+
+    _timerReenvio = setInterval(() => {
+      secs--;
+      spanSecs.textContent = secs;
+      if (secs <= 0) {
+        clearInterval(_timerReenvio);
+        btn.disabled    = false;
+        btn.textContent = 'Reenviar código';
+      }
+    }, 1000);
+  }
+
+  async function reenviarCodigo() {
+    const alerta = document.getElementById('verificarAlert');
+
+    try {
+      await reenviarVerificacionRegistro(_correoUser);
+      mostrarAlerta(alerta, `📨 Nuevo código enviado a ${_correoUser}.`, 'success');
+    } catch (err) {
+      mostrarAlerta(alerta, err.message, 'error');
+    }
+
+    limpiarCeldas();
+    document.getElementById('c0').focus();
+    iniciarCountdownReenvio();
+  }
+
+  // ── Verificar y activar la cuenta ──────────────────────────────
+  async function verificarCuenta() {
+    const codigo  = obtenerCodigoIngresado();
+    const errorEl = document.getElementById('errorCodigo');
+    const btn     = document.querySelector('#panelCodigo .btn--primary');
+
+    if (codigo.length < 6) {
+      errorEl.textContent   = 'Ingresa los 6 dígitos del código.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    errorEl.style.display = 'none';
+    btn.disabled    = true;
+    btn.textContent = 'Verificando…';
+
+    try {
+      await verificarRegistro(_correoUser, codigo);
+
+      clearInterval(_timerReenvio);
+
+      document.querySelectorAll('.recover-panel').forEach(p => p.classList.remove('recover-panel--active'));
+      document.getElementById('panelExito').classList.add('recover-panel--active');
+
+    } catch (err) {
+      errorEl.textContent   = err.message;
+      errorEl.style.display = 'block';
+      limpiarCeldas();
+      document.getElementById('c0').focus();
+      btn.disabled    = false;
+      btn.textContent = 'Verificar cuenta';
+    }
+  }
+
+</script>
+
+</body>
+</html>

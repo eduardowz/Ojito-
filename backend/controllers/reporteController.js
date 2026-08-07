@@ -1,5 +1,6 @@
 const Reporte = require("../models/Reporte");
 const Usuario = require("../models/Usuario");
+const { enviarCambioEstadoReporte } = require("../utils/mailer");
 
 const TIPO_A_INSTITUCION = {
     bache: "Obras Públicas",
@@ -26,7 +27,6 @@ exports.crearReporte = async (req, res) => {
             foto
         } = req.body;
 
-        // Buscar al ciudadano por su correo
         const usuario = await Usuario.findOne({
             correo: correo.toLowerCase()
         });
@@ -52,7 +52,6 @@ exports.crearReporte = async (req, res) => {
 
             foto: foto || "",
 
-            // NUEVO: se asigna la institución automáticamente según el tipo
             institucion: TIPO_A_INSTITUCION[tipo] || ""
 
         });
@@ -81,7 +80,13 @@ exports.obtenerReportes = async (req, res) => {
 
     try {
 
-        const reportes = await Reporte.find()
+        const filtro = {};
+
+        if (req.query.incluirResueltos !== "true") {
+            filtro.estado = { $ne: "resuelto" };
+        }
+
+        const reportes = await Reporte.find(filtro)
             .populate("ciudadano", "nombre correo")
             .sort({ createdAt: -1 });
 
@@ -106,7 +111,7 @@ exports.actualizarReporte = async (req, res) => {
 
         const { id } = req.params;
 
-        const reporte = await Reporte.findById(id);
+        const reporte = await Reporte.findById(id).populate("ciudadano", "correo");
 
         if (!reporte) {
             return res.status(404).json({
@@ -114,6 +119,12 @@ exports.actualizarReporte = async (req, res) => {
             });
         }
 
+        // Validación de dueño
+        if (!reporte.ciudadano || reporte.ciudadano.correo !== req.usuario.correo) {
+            return res.status(403).json({
+                mensaje: "No puedes modificar un reporte que no es tuyo."
+            });
+        }
 
         // Solo permitir modificar si está pendiente
         if (reporte.estado !== "pendiente") {
@@ -123,7 +134,6 @@ exports.actualizarReporte = async (req, res) => {
             });
 
         }
-
 
         const {
             tipo,
@@ -141,20 +151,16 @@ exports.actualizarReporte = async (req, res) => {
         if (longitud !== undefined) reporte.longitud = longitud;
         if (urgencia !== undefined) reporte.urgencia = urgencia;
 
-        // Si el ciudadano cambia el tipo, se recalcula la institución
         if (tipo !== undefined) {
             reporte.institucion = TIPO_A_INSTITUCION[tipo] || reporte.institucion;
         }
 
-
         await reporte.save();
-
 
         res.json({
             mensaje: "Reporte actualizado correctamente.",
             reporte
         });
-
 
     } catch(error) {
 
@@ -168,12 +174,7 @@ exports.actualizarReporte = async (req, res) => {
 
 };
 
-
-// ══════════════════════════════════════════════════════════════
-// NUEVO: Actualizar estado y progreso (uso de INSTITUCIÓN)
-// Separado de actualizarReporte porque ese está bloqueado a
-// reportes "pendiente" y no acepta estado/progreso en absoluto.
-// ══════════════════════════════════════════════════════════════
+// Actualizar estado y progreso (uso de INSTITUCIÓN)
 exports.actualizarEstadoInstitucion = async (req, res) => {
 
     try {
@@ -184,18 +185,22 @@ exports.actualizarEstadoInstitucion = async (req, res) => {
         const ESTADOS_VALIDOS = ["pendiente", "revision", "resuelto"];
 
         if (!ESTADOS_VALIDOS.includes(estado)) {
-            return res.status(400).json({
-                mensaje: "Estado no válido."
-            });
+            return res.status(400).json({ mensaje: "Estado no válido." });
         }
 
-        const reporte = await Reporte.findById(id);
+        const reporte = await Reporte.findById(id).populate("ciudadano", "correo");
 
         if (!reporte) {
-            return res.status(404).json({
-                mensaje: "Reporte no encontrado."
+            return res.status(404).json({ mensaje: "Reporte no encontrado." });
+        }
+
+        if (reporte.institucion !== req.institucion.tipo) {
+            return res.status(403).json({
+                mensaje: "No tienes permiso para modificar este reporte."
             });
         }
+
+        const estadoAnterior = reporte.estado;
 
         reporte.estado = estado;
 
@@ -203,7 +208,15 @@ exports.actualizarEstadoInstitucion = async (req, res) => {
             reporte.progreso = progreso;
         }
 
+        if (estado === "resuelto" && !reporte.fechaResolucion) {
+            reporte.fechaResolucion = new Date();
+        }
+
         await reporte.save();
+
+        if (estadoAnterior !== estado && reporte.ciudadano && reporte.ciudadano.correo) {
+            await enviarCambioEstadoReporte(reporte.ciudadano.correo, reporte.tipo, estado);
+        }
 
         res.json({
             mensaje: "Estado del reporte actualizado correctamente.",
@@ -211,23 +224,13 @@ exports.actualizarEstadoInstitucion = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error(error);
-
-        res.status(500).json({
-            mensaje: "Error al actualizar el estado del reporte."
-        });
-
+        res.status(500).json({ mensaje: "Error al actualizar el estado del reporte." });
     }
 
 };
 
-
-// ══════════════════════════════════════════════════════════════
-// NUEVO: Agregar avance a la bitácora (texto y/o foto de evidencia)
-// Uso de INSTITUCIÓN, para dar transparencia al ciudadano de que
-// su reporte sí se está atendiendo.
-// ══════════════════════════════════════════════════════════════
+// Agregar avance a la bitácora (uso de INSTITUCIÓN)
 exports.agregarBitacora = async (req, res) => {
 
     try {
@@ -236,31 +239,35 @@ exports.agregarBitacora = async (req, res) => {
         const { texto, foto, autor } = req.body;
 
         if (!texto && !foto) {
-            return res.status(400).json({
-                mensaje: "Agrega un texto o una foto de evidencia."
+            return res.status(400).json({ mensaje: "Agrega un texto o una foto de evidencia." });
+        }
+
+        if (foto && foto.length > 2_800_000) {
+            return res.status(413).json({
+                mensaje: "La foto es demasiado grande. Usa una imagen más ligera (máx. ~2MB)."
             });
         }
 
-        const reporte = await Reporte.findByIdAndUpdate(
-            id,
-            {
-                $push: {
-                    bitacora: {
-                        texto: texto || "",
-                        foto: foto || "",
-                        autor: autor || "Institución",
-                        fecha: new Date()
-                    }
-                }
-            },
-            { new: true }
-        );
+        const reporte = await Reporte.findById(id);
 
         if (!reporte) {
-            return res.status(404).json({
-                mensaje: "Reporte no encontrado."
+            return res.status(404).json({ mensaje: "Reporte no encontrado." });
+        }
+
+        if (reporte.institucion !== req.institucion.tipo) {
+            return res.status(403).json({
+                mensaje: "No tienes permiso para modificar este reporte."
             });
         }
+
+        reporte.bitacora.push({
+            texto: texto || "",
+            foto: foto || "",
+            autor: autor || "Institución",
+            fecha: new Date()
+        });
+
+        await reporte.save();
 
         res.json({
             mensaje: "Avance registrado correctamente.",
@@ -268,17 +275,11 @@ exports.agregarBitacora = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error(error);
-
-        res.status(500).json({
-            mensaje: "Error al agregar el avance."
-        });
-
+        res.status(500).json({ mensaje: "Error al agregar el avance." });
     }
 
 };
-
 
 // Eliminar reporte
 exports.eliminarReporte = async (req, res) => {
@@ -287,9 +288,7 @@ exports.eliminarReporte = async (req, res) => {
 
         const { id } = req.params;
 
-
-        const reporte = await Reporte.findById(id);
-
+        const reporte = await Reporte.findById(id).populate("ciudadano", "correo");
 
         if (!reporte) {
 
@@ -299,6 +298,12 @@ exports.eliminarReporte = async (req, res) => {
 
         }
 
+        // Validación de dueño
+        if (!reporte.ciudadano || reporte.ciudadano.correo !== req.usuario.correo) {
+            return res.status(403).json({
+                mensaje: "No puedes eliminar un reporte que no es tuyo."
+            });
+        }
 
         if (reporte.estado !== "pendiente") {
 
@@ -308,24 +313,42 @@ exports.eliminarReporte = async (req, res) => {
 
         }
 
-
         await Reporte.findByIdAndDelete(id);
-
 
         res.json({
             mensaje: "Reporte eliminado correctamente."
         });
 
-
     } catch(error) {
 
         console.error(error);
-
 
         res.status(500).json({
             mensaje: "Error al eliminar reporte."
         });
 
+    }
+
+};
+
+exports.obtenerReportePorId = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        const reporte = await Reporte.findById(id)
+            .populate("ciudadano", "nombre correo");
+
+        if (!reporte) {
+            return res.status(404).json({ mensaje: "Reporte no encontrado." });
+        }
+
+        res.json(reporte);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ mensaje: "Error al obtener el reporte." });
     }
 
 };

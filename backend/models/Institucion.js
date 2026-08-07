@@ -24,12 +24,18 @@ const institucionSchema = new mongoose.Schema({
         required: true
     },
 
+    estado: {
+        type: String,
+        enum: ["Activa", "Suspendida"],
+        default: "Activa"
+    },
+
     passwordHash: {
         type: String,
         required: true
     }
 
-});
+}, { timestamps: true });
 
 
 module.exports = mongoose.model(

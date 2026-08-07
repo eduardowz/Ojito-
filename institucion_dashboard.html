@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel institucional · Juárez Observa</title>
+<link rel="icon" type="image/png" href="logo/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -57,11 +58,12 @@
     font-family:var(--font-display);
     font-size:19px;letter-spacing:.2px;
   }
-  .sidebar__brand-mark{
-    width:11px;height:11px;border-radius:2px;
-    background:#fff;
-    transform:rotate(45deg);
-    flex:none;
+  .sidebar__brand-logo{
+    height:28px;width:auto;max-width:28px;
+    object-fit:contain;
+    display:block;
+    flex-shrink:0;
+    border-radius:6px;
   }
   .sidebar__inst{
     position:relative;
@@ -170,7 +172,7 @@
   .btn--forest{background:var(--jo-forest);border-color:var(--jo-forest);}
 
   .mapa-frame{
-    position:relative;height:480px;border-radius:14px;overflow:hidden;
+    position:relative;z-index:1;height:480px;border-radius:14px;overflow:hidden;
     border:1px solid var(--jo-line);
     background:#e7e5df;
   }
@@ -244,6 +246,13 @@
     border:1px dashed var(--jo-line);color:#5b5870;cursor:pointer;text-align:center;width:100%;
   }
 
+  .jo-toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--jo-ink);color:#fff;padding:12px 20px;border-radius:8px;
+    font-family:var(--font-body);font-size:13.5px;z-index:100;
+    box-shadow:0 6px 20px rgba(0,0,0,.18);
+  }
+
   @media (max-width:880px){
     .panel{grid-template-columns:1fr;}
     .sidebar{flex-direction:row;flex-wrap:wrap;align-items:center;}
@@ -263,7 +272,7 @@
     <div class="sidebar__grid" id="sidebarGrid"><div class="watch-grid__lines"></div></div>
 
     <div class="sidebar__brand">
-      <span class="sidebar__brand-mark"></span>
+      <img src="logo/logo.png" alt="logoJO" class="sidebar__brand-logo">
       Juárez Observa
     </div>
 
@@ -317,7 +326,7 @@
         <div>
           <div class="main__eyebrow">Ubicación de incidencias</div>
           <h1 class="main__title">Mapa de reportes</h1>
-          <p class="main__sub">Cada punto representa un reporte asignado a tu institución, sobre el mismo mapa que usan los ciudadanos.</p>
+          <p class="main__sub">Cada punto representa un reporte pendiente o en proceso, asignado a tu institución, sobre el mismo mapa que usan los ciudadanos.</p>
         </div>
       </div>
       <div class="mapa-frame">
@@ -326,7 +335,6 @@
       <div class="mapa-legend">
         <span><i style="background:var(--jo-terracotta)"></i> Pendiente</span>
         <span><i style="background:var(--jo-steel)"></i> En proceso</span>
-        <span><i style="background:var(--jo-forest)"></i> Resuelto</span>
       </div>
     </section>
 
@@ -418,21 +426,22 @@
   <button class="btn btn--forest btn--sm" id="detailResueltoBtn" style="margin-top:22px;width:100%;">Marcar como resuelto</button>
 </aside>
 
+<div class="jo-toast" id="toast" hidden></div>
+
+
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/institucion.js"></script>
 <script>
   // ══════════════════════════════════════════════════════════
   // ESTADO DE LA PÁGINA
-  // Nota: todas las funciones de institucion.js son async ahora
-  // (hacen fetch al backend real), así que todo lo que las llama
-  // aquí también es async y usa await.
   // ══════════════════════════════════════════════════════════
   let SESION       = null;
   let TIPO         = null;
   let filtroEstado = 'todos';
   let reporteActivoId = null;
-  let fotoPendiente = ''; // dataURL de la foto seleccionada, antes de guardar el avance
+  let fotoPendiente = '';
 
   let institucionMap       = null;
   let institucionMarkersLG = null;
@@ -460,7 +469,7 @@
     TIPO = SESION.tipo;
 
     document.getElementById('instTipo').textContent   = TIPO;
-    document.getElementById('instNombre').textContent = SESION.nombre;
+    document.getElementById('instNombre').textContent = SESION.nombreInstitucion;
     document.getElementById('instCorreo').textContent = SESION.correo;
     document.getElementById('bandejaTitulo').textContent = TIPO;
 
@@ -474,6 +483,14 @@
 
     await renderTodo();
   });
+
+  function mostrarToast(mensaje, ms = 3000) {
+    const t = document.getElementById('toast');
+    if (!t) { console.warn('Toast:', mensaje); return; }
+    t.textContent = mensaje;
+    t.hidden = false;
+    setTimeout(() => { t.hidden = true; }, ms);
+  }
 
   async function renderTodo(){
     try {
@@ -571,6 +588,10 @@
 
   // ══════════════════════════════════════════════════════════
   // MAPA — Leaflet real
+  // El mapa institucional, igual que el de ciudadano, solo
+  // muestra reportes activos (pendiente / en proceso). Los
+  // resueltos siguen visibles en Bandeja e Historial, pero
+  // el mapa se usa como "trabajo por hacer", no como archivo.
   // ══════════════════════════════════════════════════════════
   function asegurarMapaInstitucion(){
     if (institucionMap) return;
@@ -590,9 +611,10 @@
     asegurarMapaInstitucion();
 
     const reportes = await obtenerReportesPorInstitucion(TIPO);
+    const reportesActivos = reportes.filter(r => r.estado !== 'resuelto');
     institucionMarkersLG.clearLayers();
 
-    reportes.forEach(r => {
+    reportesActivos.forEach(r => {
       if (typeof r.lat !== 'number' || typeof r.lng !== 'number') return;
       const color = COLOR_ESTADO_HEX[r.estado] || '#1F1D2B';
       const marker = L.circleMarker([r.lat, r.lng], {
@@ -616,8 +638,8 @@
       marker.addTo(institucionMarkersLG);
     });
 
-    if (reportes.length > 0){
-      const bounds = L.latLngBounds(reportes.filter(r => typeof r.lat === 'number' && typeof r.lng === 'number').map(r => [r.lat, r.lng]));
+    if (reportesActivos.length > 0){
+      const bounds = L.latLngBounds(reportesActivos.filter(r => typeof r.lat === 'number' && typeof r.lng === 'number').map(r => [r.lat, r.lng]));
       if (bounds.isValid()) institucionMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
     } else {
       institucionMap.setView(JUAREZ_CENTER, JUAREZ_ZOOM);
@@ -743,8 +765,9 @@
       if (!reporteActivoId) return;
       try {
         await marcarResuelto(reporteActivoId);
-        await refrescarDetalle();
         await renderTodo();
+        mostrarToast('✓ Reporte marcado como resuelto');
+        cerrarDetalle();
       } catch (error) {
         mostrarToast(error.message);
       }
@@ -761,7 +784,7 @@
       }
 
       try {
-        await agregarAvance(reporteActivoId, { texto, foto: fotoPendiente }, SESION.nombre);
+        await agregarAvance(reporteActivoId, { texto, foto: fotoPendiente }, SESION.nombreInstitucion);
         input.value = '';
         fotoPendiente = '';
         document.getElementById('detailFotoPreview').textContent = '';
@@ -775,13 +798,31 @@
     document.getElementById('detailFotoInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
-      reader.onload = () => {
-        fotoPendiente = reader.result;
-        document.getElementById('detailFotoPreview').textContent = `📎 ${file.name} lista para adjuntar`;
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_ANCHO = 900;
+          const escala = Math.min(1, MAX_ANCHO / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * escala;
+          canvas.height = img.height * escala;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          fotoPendiente = canvas.toDataURL('image/jpeg', 0.7);
+
+          const tamKB = Math.round((fotoPendiente.length * 0.75) / 1024);
+          document.getElementById('detailFotoPreview').textContent =
+            `📎 ${file.name} lista para adjuntar (~${tamKB} KB)`;
+        };
+        img.src = ev.target.result;
       };
       reader.readAsDataURL(file);
     });
+
   }
 
   function abrirDetalle(id){

@@ -59,10 +59,8 @@
       <h2 class="auth__title">Crea tu cuenta</h2>
       <p class="auth__subtitle">Regístrate como ciudadano para empezar a reportar incidentes en tu colonia.</p>
 
-      <!-- ✅ FIX: sin clase alert--error fija -->
       <div class="alert" id="registroAlert"></div>
 
-      <!-- ✅ FIX: sin action de PHP por ahora, se maneja todo en JS -->
       <form id="formRegistro" novalidate>
 
         <div class="field" id="campoNombre">
@@ -98,7 +96,6 @@
             <button type="button" class="input-group__action"
                     data-toggle-password="password">MOSTRAR</button>
           </div>
-          <!-- ✅ Barra de fuerza de contraseña igual que en recuperar.html -->
           <div class="password-strength">
             <div class="strength-bar">
               <div class="strength-bar__fill" id="strengthFill"></div>
@@ -121,7 +118,6 @@
           <span class="field-error"></span>
         </div>
 
-        <!-- ✅ FIX: canvas igual que en login.html -->
         <div class="field" id="campoCaptcha">
           <label for="captchaInput">Verificación de seguridad</label>
           <div class="captcha">
@@ -160,7 +156,7 @@
 <script>
 
   // ══════════════════════════════════════════════════════════════
-  // REGEX TELÉFONO — ✅ FIX: definido aquí porque no está en app.js
+  // REGEX TELÉFONO
   // ══════════════════════════════════════════════════════════════
   const REGEX_TELEFONO = /^\d{10}$/;
 
@@ -168,12 +164,23 @@
   let _captchaRegistro = '';
 
   // ══════════════════════════════════════════════════════════════
-  // INICIALIZACIÓN — ✅ FIX: todo dentro de DOMContentLoaded
+  // INICIALIZACIÓN
   // ══════════════════════════════════════════════════════════════
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
 
     pintarRetícula('registroGrid', 16);
     generarCaptchaRegistro();
+
+    // Verificar si el registro está abierto antes de dejar usar el formulario
+    const parametros = await consultarParametros();
+    if (parametros && parametros.registroAbierto === false) {
+      const alerta = document.getElementById('registroAlert');
+      mostrarAlerta(alerta, '🔒 El registro de nuevas cuentas está cerrado temporalmente. Intenta más tarde.', 'error');
+
+      const form = document.getElementById('formRegistro');
+      form.querySelectorAll('input, button').forEach(el => el.disabled = true);
+      return; // no seguimos configurando listeners de un form deshabilitado
+    }
 
     // Formato automático del teléfono mientras escribe
     document.getElementById('telefono').addEventListener('input', (e) => {
@@ -278,7 +285,7 @@
   }
 
   // ══════════════════════════════════════════════════════════════
-  // VALIDACIÓN Y SUBMIT — ✅ ACTUALIZADO: hash SHA-256 vía app.js
+  // VALIDACIÓN Y SUBMIT
   // ══════════════════════════════════════════════════════════════
   async function handleRegistro() {
     const alerta       = document.getElementById('registroAlert');
@@ -360,7 +367,6 @@
     btn.textContent = 'Creando cuenta…';
 
     try {
-      // registrarUsuario() y hashPassword() viven en assets/js/app.js
       await registrarUsuario({
         nombre: nombre.value.trim(),
         correo: correo.value.trim(),
@@ -368,21 +374,19 @@
         password: password.value
       });
 
+      mostrarAlerta(
+        alerta,
+        '✅ Cuenta creada. Te estamos llevando a verificar tu correo…',
+        'success'
+      );
+
+      // 👇 NUEVO: en vez de resetear el formulario, llevamos al usuario
+      // a la pantalla donde captura el código de verificación.
       setTimeout(() => {
-        mostrarAlerta(
-          alerta,
-          '✅ Cuenta creada. Revisa tu correo para verificarla antes de iniciar sesión.',
-          'success'
-        );
-        document.getElementById('formRegistro').reset();
-        evaluarFuerzaRegistro('');
-        generarCaptchaRegistro();
-        btn.disabled    = false;
-        btn.textContent = 'Crear cuenta';
+        window.location.href = 'verificar-cuenta.html?correo=' + encodeURIComponent(correo.value.trim());
       }, 1200);
 
     } catch (err) {
-      // Ej. "Ya existe una cuenta registrada con ese correo."
       mostrarAlerta(alerta, err.message, 'error');
       btn.disabled    = false;
       btn.textContent = 'Crear cuenta';

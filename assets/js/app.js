@@ -24,12 +24,13 @@ function mostrarAlerta(el, mensaje, tipo = 'error') {
 }
 
 // ── Sesión (ciudadano) ──────────────────────────────────────
-function crearSesion(correo, nombre = 'Usuario', telefono = '') {
+function crearSesion(correo, nombre = 'Usuario', telefono = '', token = '') {
 
   const sesion = {
     correo,
     nombre,
     telefono,
+    token,
     rol: 'ciudadano',
     expira: Date.now() + (8 * 60 * 60 * 1000)
   };
@@ -63,6 +64,19 @@ function cerrarSesion(redirectUrl = 'login.html') {
 
 function inicialesDeNombre(nombre = '') {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// FETCH AUTENTICADO — agrega el header Authorization automáticamente
+// si hay una sesión de ciudadano con token guardada.
+// ══════════════════════════════════════════════════════════════
+async function fetchAutenticado(url, opciones = {}) {
+  const sesion = obtenerSesion();
+  const headers = {
+    ...(opciones.headers || {}),
+    ...(sesion?.token ? { "Authorization": `Bearer ${sesion.token}` } : {})
+  };
+  return fetch(url, { ...opciones, headers });
 }
 
 // ── Retícula decorativa ───────────────────────────────────────
@@ -106,24 +120,10 @@ async function hashPassword(password) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ALMACÉN DE USUARIOS (ciudadanos) — simulado con localStorage
-// ⚠️ Solo para pruebas/demo. En producción esto vive en un
-// backend real con base de datos, nunca en el navegador.
+// REGISTRO / LOGIN — conexión real al backend
 // ══════════════════════════════════════════════════════════════
-function _obtenerUsuarios() {
-  try {
-    return JSON.parse(localStorage.getItem('jo_usuarios')) || {};
-  } catch { return {}; }
-}
-
-function _guardarUsuarios(usuarios) {
-  localStorage.setItem('jo_usuarios', JSON.stringify(usuarios));
-}
-
 async function registrarUsuario({ nombre, correo, telefono, password }) {
 
-  // Seguimos generando el hash en el navegador,
-  // igual que hacía tu proyecto.
   const passwordHash = await hashPassword(password);
 
   const respuesta = await fetch("http://localhost:3000/api/usuarios/registro", {
@@ -170,13 +170,100 @@ async function verificarCredenciales(correo, password) {
     })
   });
 
+  const datos = await respuesta.json();
 
   if (!respuesta.ok) {
+    if (datos.requiereVerificacion) {
+      const error = new Error(datos.mensaje);
+      error.requiereVerificacion = true;
+      throw error;
+    }
     return null;
   }
 
+  // 👇 Ahora regresa también el token, igual que institución
+  return { usuario: datos.usuario, token: datos.token };
+}
+
+// ══════════════════════════════════════════════════════════════
+// RECUPERACIÓN DE CONTRASEÑA — conexión real al backend
+// ══════════════════════════════════════════════════════════════
+
+async function solicitarRecuperacion(correo) {
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/solicitar-recuperacion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: correo.trim().toLowerCase() })
+  });
 
   const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.mensaje);
+  return datos;
+}
 
-  return datos.usuario;
+async function verificarCodigoRecuperacion(correo, codigo) {
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/verificar-codigo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo })
+  });
+
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.mensaje);
+  return datos;
+}
+
+async function restablecerPassword(correo, codigo, password) {
+  const passwordHash = await hashPassword(password);
+
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/restablecer-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo, passwordHash })
+  });
+
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.mensaje);
+  return datos;
+}
+
+// ══════════════════════════════════════════════════════════════
+// VERIFICACIÓN DE CORREO AL REGISTRARSE
+// ══════════════════════════════════════════════════════════════
+
+async function verificarRegistro(correo, codigo) {
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/verificar-registro", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo })
+  });
+
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.mensaje);
+  return datos;
+}
+
+async function reenviarVerificacionRegistro(correo) {
+  const respuesta = await fetch("http://localhost:3000/api/usuarios/reenviar-verificacion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: correo.trim().toLowerCase() })
+  });
+
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.mensaje);
+  return datos;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PARÁMETROS
+// ══════════════════════════════════════════════════════════════
+async function consultarParametros() {
+  try {
+    const respuesta = await fetch("http://localhost:3000/api/parametros");
+    if (!respuesta.ok) return null;
+    return await respuesta.json();
+  } catch {
+    return null;
+  }
 }
