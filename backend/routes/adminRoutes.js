@@ -10,7 +10,7 @@ const Usuario = require("../models/Usuario");
 const Institucion = require("../models/Institucion");
 
 const Categoria = require("../models/Categoria");
-const Parametros = require("../models/parametros");
+const Parametros = require("../models/Parametros");
 
 router.get("/", (req, res) => {
     res.json({ mensaje: "Ruta de administradores funcionando" });

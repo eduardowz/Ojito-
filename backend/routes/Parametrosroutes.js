@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const Parametros = require("../models/parametros");
+const Parametros = require("../models/Parametros");
 
 console.log("Parametros es:", Parametros); 
 
