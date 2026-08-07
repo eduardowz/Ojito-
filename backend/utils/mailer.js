@@ -1,27 +1,30 @@
-const nodemailer = require("nodemailer");
-
-const transportador = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    },
-    family: 4,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-});
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 async function enviarCorreo(destinatario, asunto, html) {
     try {
-        await transportador.sendMail({
-            from: `"Juárez Observa" <${process.env.GMAIL_USER}>`,
-            to: destinatario,
-            subject: asunto,
-            html
+        const respuesta = await fetch(BREVO_API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "api-key": process.env.BREVO_API_KEY
+            },
+            body: JSON.stringify({
+                sender: {
+                    name: "Juárez Observa",
+                    email: process.env.BREVO_SENDER_EMAIL
+                },
+                to: [{ email: destinatario }],
+                subject: asunto,
+                htmlContent: html
+            })
         });
+
+        if (!respuesta.ok) {
+            const error = await respuesta.text();
+            throw new Error(`Brevo respondió ${respuesta.status}: ${error}`);
+        }
+
         return true;
     } catch (error) {
         console.log("Error al enviar correo:", error);
