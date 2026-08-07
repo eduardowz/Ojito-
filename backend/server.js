@@ -23,7 +23,7 @@ const institucionRoutes = require("./routes/institucionRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const reporteRoutes = require("./routes/reporteRoutes");
 const categoriaRoutes = require("./routes/categoriaRoutes");
-const parametrosRoutes = require("./routes/parametrosRoutes"); 
+const parametrosRoutes = require("./routes/ParametrosRoutes"); 
 
 // 👇 Usar las rutas
 app.use("/api/usuarios", usuarioRoutes);
