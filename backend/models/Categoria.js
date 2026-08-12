@@ -28,6 +28,12 @@ const categoriaSchema = new mongoose.Schema({
     institucion: {
         type: String,
         required: true
+    },
+
+    estado: {
+        type: String,
+        enum: ["activa", "suspendida"],
+        default: "activa"
     }
 
 }, { timestamps: true });
