@@ -10,13 +10,6 @@
 <link rel="stylesheet" href="assets/css/styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <style>
-  /* ══════════════════════════════════════════════════════════
-     TOKENS · panel de administrador
-     Exactamente los mismos tokens y la misma barra lateral verde
-     (--jo-indigo) que institucion_dashboard.html, para que los
-     tres roles (ciudadano / institución / administrador) se
-     sientan como una sola plataforma y no como pantallas sueltas.
-     ══════════════════════════════════════════════════════════ */
   :root{
     --jo-cream:#F4F3F0;
     --jo-ink:#1F1D2B;
@@ -41,14 +34,12 @@
     -webkit-font-smoothing:antialiased;
   }
 
-  /* ── layout raíz ─────────────────────────────────────────── */
   .panel{
     display:grid;
     grid-template-columns:272px 1fr;
     min-height:100vh;
   }
 
-  /* ── sidebar ─────────────────────────────────────────────── */
   .sidebar{
     position:relative;
     background:var(--jo-indigo);
@@ -132,7 +123,6 @@
   }
   .btn-salir:hover{background:rgba(255,255,255,0.1);}
 
-  /* ── main ────────────────────────────────────────────────── */
   .main{padding:30px 40px 60px;max-width:1240px;}
   .main__header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:26px;gap:20px;flex-wrap:wrap;}
   .main__eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--jo-terracotta);}
@@ -142,7 +132,6 @@
   .view{display:none;}
   .view.is-active{display:block;}
 
-  /* ── stat cards ──────────────────────────────────────────── */
   .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
   .statcard{background:#fff;border:1px solid var(--jo-line);border-radius:12px;padding:16px 18px;}
   .statcard__label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:#847f97;}
@@ -152,7 +141,6 @@
   .statcard--resuelto .statcard__value{color:var(--jo-forest);}
   .statcard--alerta .statcard__value{color:var(--jo-gold);}
 
-  /* ── toolbars / filtros ──────────────────────────────────── */
   .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;justify-content:space-between;}
   .toolbar__filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .tabs{display:flex;gap:8px;flex-wrap:wrap;}
@@ -200,7 +188,6 @@
   .empty__sub{color:#847f97;font-size:13.5px;margin-top:6px;}
   .empty .btn{margin-top:18px;}
 
-  /* ── tablas ──────────────────────────────────────────────── */
   table.datatable{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--jo-line);border-radius:10px;overflow:hidden;}
   table.datatable th{
     text-align:left;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;
@@ -212,7 +199,6 @@
   .cell-actions{display:flex;gap:6px;flex-wrap:wrap;}
   .cell-muted{color:#a39dae;font-family:var(--font-mono);font-size:11.5px;}
 
-  /* ── métricas / barras ───────────────────────────────────── */
   .metric-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;}
   .card-box{background:#fff;border:1px solid var(--jo-line);border-radius:12px;padding:20px;}
   .card-box__title{font-family:var(--font-display);font-size:16px;margin-bottom:14px;}
@@ -222,7 +208,6 @@
   .bar-row__fill{height:100%;border-radius:5px;}
   .bar-row__val{width:30px;text-align:right;font-family:var(--font-mono);font-size:12px;color:#5b5870;}
 
-  /* ── chips de categoría ──────────────────────────────────── */
   .chip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
   .chip-card{background:#fff;border:1px solid var(--jo-line);border-radius:12px;padding:14px 16px;}
   .chip-card__top{display:flex;align-items:center;gap:9px;}
@@ -250,7 +235,6 @@
   .switch-row__label{font-weight:600;font-size:14px;}
   .switch-row__desc{font-size:12.5px;color:#847f97;margin-top:2px;}
 
-  /* ── formularios (parámetros / modales) ─────────────────── */
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   .form-field{display:flex;flex-direction:column;gap:6px;}
   .form-field label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:#847f97;}
@@ -262,7 +246,6 @@
   .form-hint{font-size:11.5px;color:#a39dae;}
   .form-actions{display:flex;gap:10px;margin-top:20px;}
 
-  /* ── modal centrado (usuarios / instituciones / categorías) ─ */
   .modal-overlay{
     position:fixed;inset:0;background:rgba(31,29,43,.4);
     opacity:0;pointer-events:none;transition:opacity .15s;
@@ -286,7 +269,6 @@
   .modal__close{background:none;border:none;font-size:18px;cursor:pointer;color:#847f97;}
   .modal__body{display:flex;flex-direction:column;gap:14px;}
 
-  /* ── panel de detalle (slide-over) reutilizado en Reportes ─ */
   .overlay{
     position:fixed;inset:0;background:rgba(31,29,43,.35);
     opacity:0;pointer-events:none;transition:opacity .18s;z-index:40;
@@ -306,7 +288,6 @@
   .detail__section{margin-top:22px;}
   .detail__label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:#847f97;margin-bottom:8px;}
 
-  /* ── log de actividad ────────────────────────────────────── */
   .log-list{display:flex;flex-direction:column;}
   .log-item{display:grid;grid-template-columns:110px auto 1fr;gap:14px;padding:12px 4px;border-bottom:1px solid var(--jo-line-soft);align-items:start;}
   .log-item:last-child{border-bottom:none;}
@@ -652,27 +633,6 @@
 <script src="assets/js/app.js"></script>
 <script src="assets/js/admin.js"></script>
 <script>
-/* ══════════════════════════════════════════════════════════════
-   PANEL DE ADMINISTRADOR — capa de datos propia (joAdmin_*)
-   ------------------------------------------------------------
-   Este archivo asume, igual que institucion_dashboard.html, que
-   existen ayudantes globales en assets/js/app.js (pintarRetícula,
-   mostrarAlerta, REGEX_CORREO, hashPassword…) y en
-   assets/js/institucion.js (obtenerReportePorId, cambiarEstadoReporte,
-   calcularMetricas, etc.). Si tu app.js ya tiene un store de
-   usuarios/instituciones/reportes, sustituye las funciones
-   "obtenerX / guardarX" de este bloque por las tuyas — el resto
-   de la página (render, filtros, modales) no necesita cambiar.
-   Mientras tanto, este bloque funciona de forma autónoma con
-   localStorage bajo el prefijo "joAdmin_" y se auto-siembra con
-   datos de ejemplo la primera vez que se abre.
-
-   ⚠️ NOTA DE CORRECCIÓN: los reportes reales (creados en
-   institucion.js / jo_reportes) usan la propiedad
-   "institucionAsignada", NO "institucionTipo". Todo este bloque
-   fue corregido para usar "institucionAsignada" de forma
-   consistente con el resto de la plataforma.
-   ══════════════════════════════════════════════════════════════ */
 
   const LS_USUARIOS      = 'joAdmin_usuarios';
   const LS_INSTITUCIONES = 'joAdmin_instituciones';
@@ -729,7 +689,6 @@
     escribirLS(LS_ACTIVIDAD, log.slice(0, 200));
   }
 
-  // ── accesores ────────────────────────────────────────────────
   const obtenerUsuarios      = () => leerLS(LS_USUARIOS, []);
   const guardarUsuarios      = (v) => escribirLS(LS_USUARIOS, v);
   const obtenerInstituciones = () => leerLS(LS_INSTITUCIONES, []);
@@ -740,16 +699,10 @@
   const guardarParametros    = (v) => escribirLS(LS_PARAMETROS, v);
   const obtenerActividad     = () => leerLS(LS_ACTIVIDAD, []);
 
-  // Reportes: se reutiliza el store del rol institucional si existe
-  // (obtenerReportesPorInstitucion / cambiarEstadoReporte / etc. de
-  // institucion.js). Si no está disponible, caemos a un store propio.
   async function obtenerTodosLosReportes(){
     return await obtenerTodosLosReportesAdmin();
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // ESTADO DE LA PÁGINA
-  // ══════════════════════════════════════════════════════════════
   let ADMIN = null;
   let filtroEstadoUsuarioActual = 'Todos';
   let filtroEstadoInstActual    = 'Todos';
@@ -774,8 +727,6 @@
   document.addEventListener('DOMContentLoaded', async () => {
     seedSiVacio();
 
-    // ✅ Protege el panel: si no hay sesión de administrador válida
-    // (ver assets/js/admin.js), redirige a login.html y detiene todo.
     ADMIN = requireSesionAdmin('login.html');
     if (!ADMIN) return;
 
@@ -1347,7 +1298,6 @@
     await asignarInstitucionReporteAdmin(reporteId, institucionTipo);
   }
 
-  // ── panel de detalle (reutilizando patrón de institucion_dashboard) ──
   function initDetailPanel(){
     document.getElementById('overlay').addEventListener('click', cerrarDetalleReporte);
     document.getElementById('detailClose').addEventListener('click', cerrarDetalleReporte);
@@ -1374,8 +1324,6 @@
       }
     });
 
-    // 👇 CORREGIDO: antes no eliminaba nada de verdad, solo registraba
-    // la actividad y cerraba el panel. Ahora sí llama al backend.
     document.getElementById('detailEliminarBtn').addEventListener('click', async () => {
       if (!reporteActivoId) return;
       if (!confirm('¿Eliminar este reporte de forma permanente?')) return;
@@ -1450,7 +1398,6 @@
     document.getElementById('btnNuevaCategoria').addEventListener('click', async () => await abrirModalCategoria(null));
   }
 
-  
   async function renderCategorias(){
     let cats;
     try {
@@ -1466,26 +1413,71 @@
     const reportes = await obtenerTodosLosReportes();
     reportes.forEach(r => conteo[r.categoria] = (conteo[r.categoria]||0)+1);
 
-    grid.innerHTML = cats.map(c => `
-      <div class="chip-card">
+    grid.innerHTML = cats.map(c => {
+      const numReportes = conteo[c.clave] || 0;
+      const suspendida = c.estado === 'suspendida';
+
+      let botonesExtra = '';
+
+      if (suspendida) {
+        botonesExtra += `<button class="btn btn--forest btn--sm" data-reactivar-cat="${c._id}">Reactivar</button>`;
+        if (numReportes === 0) {
+          botonesExtra += `<button class="btn btn--danger btn--sm" data-eliminar-cat="${c._id}">Eliminar</button>`;
+        }
+      } else {
+        if (numReportes > 0) {
+          botonesExtra += `<button class="btn btn--danger btn--sm" data-suspender-cat="${c._id}">Suspender</button>`;
+        } else {
+          botonesExtra += `<button class="btn btn--danger btn--sm" data-eliminar-cat="${c._id}">Eliminar</button>`;
+        }
+      }
+
+      return `
+      <div class="chip-card" style="${suspendida ? 'opacity:.6;' : ''}">
         <div class="chip-card__top">
           <span class="chip-dot" style="background:${c.color}">${ICONOS_CATEGORIA[c.icono] || '📍'}</span>
           <span class="chip-card__nombre">${c.nombre}</span>
+          <span class="badge ${suspendida ? 'badge--suspendido' : 'badge--activo'}" style="margin-left:auto;">${suspendida ? 'Suspendida' : 'Activa'}</span>
         </div>
         <div class="chip-card__meta">Se turna a ${c.institucion}</div>
-        <div class="chip-card__meta">${conteo[c.clave]||0} reportes registrados</div>
+        <div class="chip-card__meta">${numReportes} reportes registrados</div>
         <div class="chip-card__actions">
           <button class="btn btn--ghost btn--sm" data-editar-cat="${c._id}">Editar</button>
-          <button class="btn btn--danger btn--sm" data-eliminar-cat="${c._id}">Eliminar</button>
+          ${botonesExtra}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     grid.querySelectorAll('[data-editar-cat]').forEach(b => b.addEventListener('click', async () => {
       const c = cats.find(x => x._id === b.dataset.editarCat);
       await abrirModalCategoria(c);
     }));
+
+    grid.querySelectorAll('[data-suspender-cat]').forEach(b => b.addEventListener('click', async () => {
+      const c = cats.find(x => x._id === b.dataset.suspenderCat);
+      if (!confirm(`¿Suspender la categoría "${c.nombre}"? Los ciudadanos ya no podrán crear reportes nuevos con esta categoría, pero las instituciones seguirán teniendo acceso a los reportes existentes.`)) return;
+      try {
+        await cambiarEstadoCategoriaAdmin(c._id, 'suspendida');
+        registrarActividad('Administrador', ADMIN.nombre, `Suspendió la categoría "${c.nombre}"`);
+        await renderCategorias(); renderActividad();
+      } catch (error) {
+        alert(error.message);
+      }
+    }));
+
+    grid.querySelectorAll('[data-reactivar-cat]').forEach(b => b.addEventListener('click', async () => {
+      const c = cats.find(x => x._id === b.dataset.reactivarCat);
+      try {
+        await cambiarEstadoCategoriaAdmin(c._id, 'activa');
+        registrarActividad('Administrador', ADMIN.nombre, `Reactivó la categoría "${c.nombre}"`);
+        await renderCategorias(); renderActividad();
+      } catch (error) {
+        alert(error.message);
+      }
+    }));
+
     grid.querySelectorAll('[data-eliminar-cat]').forEach(b => b.addEventListener('click', async () => {
-      if (!confirm('¿Eliminar esta categoría? Los reportes que ya la tienen asignada la conservan en su historial, pero no se les podrá crear a ciudadanos nuevos con este tipo.')) return;
+      if (!confirm('¿Eliminar esta categoría de forma permanente? Esta acción no se puede deshacer.')) return;
       try {
         await eliminarCategoriaAdmin(b.dataset.eliminarCat);
         registrarActividad('Administrador', ADMIN.nombre, 'Eliminó una categoría de reporte');
@@ -1521,7 +1513,6 @@
         </select>
       </div>`;
 
-    // Resalta el ícono ya seleccionado y actualiza al hacer clic
     const marcarSeleccionado = () => {
       document.querySelectorAll('.icono-opcion').forEach(el => {
         const radio = el.previousElementSibling;
@@ -1576,7 +1567,6 @@
       <div class="statcard statcard--resuelto"><div class="statcard__label">% resueltos</div><div class="statcard__value">${reportes.length ? Math.round(100*reportes.filter(r=>r.estado==='Resuelto').length/reportes.length) : 0}%</div></div>
     `;
 
-    // por institución
     const porInst = {};
     instituciones.forEach(i => porInst[i.tipo] = 0);
     reportes.forEach(r => { if (r.institucionAsignada) porInst[r.institucionAsignada] = (porInst[r.institucionAsignada]||0)+1; });
@@ -1588,7 +1578,6 @@
         <div class="bar-row__val">${v}</div>
       </div>`).join('') || '<p style="color:#847f97;font-size:13px;">Sin datos aún.</p>';
 
-    // por categoría
     const categoriasReales = await obtenerCategoriasAdmin();
     const porCat = {};
     reportes.forEach(r => porCat[r.categoria] = (porCat[r.categoria]||0)+1);
@@ -1604,7 +1593,6 @@
       </div>`;
     }).join('') || '<p style="color:#847f97;font-size:13px;">Sin datos aún.</p>';
 
-    // por estado
     const estados = [
       {k:'Pendiente', v:reportes.filter(r=>r.estado==='Pendiente').length, c:'var(--jo-terracotta)'},
       {k:'En proceso', v:reportes.filter(r=>r.estado==='En proceso').length, c:'var(--jo-steel)'},
@@ -1618,7 +1606,6 @@
         <div class="bar-row__val">${e.v}</div>
       </div>`).join('');
 
-    // crecimiento de usuarios por mes (últimos 6 meses)
     const ahora = new Date();
     const meses = [];
     for (let i = 5; i >= 0; i--){
