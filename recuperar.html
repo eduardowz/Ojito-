@@ -12,7 +12,6 @@
 
 <div class="auth">
 
-  <!-- ============ PANEL DE MARCA ============ -->
   <section class="auth__showcase">
     <div class="watch-grid" id="recoverGrid" aria-hidden="true">
       <div class="watch-grid__lines"></div>
@@ -49,7 +48,6 @@
     </div>
   </section>
 
-  <!-- ============ PANEL DE FORMULARIO ============ -->
   <section class="auth__panel">
     <div class="auth__form-wrap">
 
@@ -61,7 +59,6 @@
       <h2 class="auth__title">Recuperar cuenta</h2>
       <p class="auth__subtitle">Sigue los pasos para restablecer tu contraseña.</p>
 
-      <!-- INDICADOR DE PASOS -->
       <div class="steps" id="stepsIndicator">
         <div class="step step--active" id="stepCircle1">
           <div class="step__circle" id="stepNum1">1</div>
@@ -81,7 +78,6 @@
 
       <div class="alert" id="recoverAlert"></div>
 
-      <!-- ══ PASO 1: CORREO ══ -->
       <div class="recover-panel recover-panel--active" id="panel1">
         <div class="info-box">
           <span>📧</span>
@@ -104,7 +100,6 @@
         <a href="login.html" class="back-link">← Volver al inicio de sesión</a>
       </div>
 
-      <!-- ══ PASO 2: CÓDIGO ══ -->
       <div class="recover-panel" id="panel2">
         <div class="info-box" id="infoCorreoEnviado">
           <span>✅</span>
@@ -142,7 +137,6 @@
                 onclick="irPaso(1)">← Cambiar correo</button>
       </div>
 
-      <!-- ══ PASO 3: NUEVA CONTRASEÑA ══ -->
       <div class="recover-panel" id="panel3">
         <div class="info-box">
           <span>🔒</span>
@@ -184,7 +178,6 @@
         </form>
       </div>
 
-      <!-- ══ PASO 4: ÉXITO ══ -->
       <div class="recover-panel" id="panelExito">
         <div class="success-icon">🎉</div>
         <div class="success-title">¡Contraseña restablecida!</div>
@@ -205,22 +198,14 @@
 <script src="assets/js/app.js"></script>
 <script>
 
-  // ══════════════════════════════════════════════════════════════
-  // ESTADO
-  // ══════════════════════════════════════════════════════════════
   let _pasoActual       = 1;
-  let _codigoVerificado = '';   // código ya validado contra el backend, se usa en el paso 3
+  let _codigoVerificado = '';
   let _correoUser       = '';
   let _timerReenvio     = null;
 
-  // ══════════════════════════════════════════════════════════════
-  // NAVEGACIÓN ENTRE PASOS
-  // ══════════════════════════════════════════════════════════════
   function irPaso(paso) {
-    // Ocultar todos los paneles
     document.querySelectorAll('.recover-panel').forEach(p => p.classList.remove('recover-panel--active'));
 
-    // Mostrar el panel correcto
     if (paso === 'exito') {
       document.getElementById('panelExito').classList.add('recover-panel--active');
       document.getElementById('stepsIndicator').style.display = 'none';
@@ -231,7 +216,6 @@
     _pasoActual = paso;
     actualizarIndicador(paso);
 
-    // Limpiar alerta
     const alerta = document.getElementById('recoverAlert');
     alerta.textContent = '';
     alerta.className   = 'alert';
@@ -254,16 +238,12 @@
       }
     }
 
-    // Líneas
     for (let i = 1; i <= 2; i++) {
       const linea = document.getElementById(`stepLine${i}`);
       linea.classList.toggle('step__line--done', i < pasoActivo);
     }
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // PASO 1 — Solicitar código real al backend
-  // ══════════════════════════════════════════════════════════════
   async function paso1Siguiente() {
     const input  = document.getElementById('correoRecover');
     const campo  = document.getElementById('campoCorreoRecover');
@@ -301,16 +281,10 @@
     }
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // PASO 2 — Inputs del código + validación real contra el backend
-  // ══════════════════════════════════════════════════════════════
-
-  // Auto-avance entre celdas
   document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('loginGrid')) pintarRetícula('loginGrid', 16);
     if (document.getElementById('recoverGrid')) pintarRetícula('recoverGrid', 16);
 
-    // Toggle contraseña
     document.querySelectorAll('[data-toggle-password]').forEach(btn => {
       btn.addEventListener('click', () => {
         const input = document.getElementById(btn.dataset.togglePassword);
@@ -320,7 +294,6 @@
       });
     });
 
-    // Inputs del código
     const celdas = document.querySelectorAll('.code-inputs input');
     celdas.forEach((celda, idx) => {
       celda.addEventListener('input', (e) => {
@@ -385,7 +358,7 @@
     try {
       await verificarCodigoRecuperacion(_correoUser, codigo);
 
-      _codigoVerificado = codigo; // se usa en el paso 3
+      _codigoVerificado = codigo;
       clearInterval(_timerReenvio);
       irPaso(3);
 
@@ -400,20 +373,20 @@
     }
   }
 
-  // ── Reenvío con countdown ──────────────────────────────────────
   function iniciarCountdownReenvio() {
-    const btn      = document.getElementById('btnReenviar');
-    const spanSecs = document.getElementById('countdownReenvio');
-    let secs       = 30;
+    const btn = document.getElementById('btnReenviar');
+    let secs  = 30;
 
-    btn.disabled        = true;
-    spanSecs.textContent = secs;
+    btn.disabled  = true;
+    btn.innerHTML = `Reenviar en <span id="countdownReenvio">${secs}</span>s`;
 
     if (_timerReenvio) clearInterval(_timerReenvio);
 
     _timerReenvio = setInterval(() => {
       secs--;
-      spanSecs.textContent = secs;
+      const spanSecs = document.getElementById('countdownReenvio');
+      if (spanSecs) spanSecs.textContent = secs;
+
       if (secs <= 0) {
         clearInterval(_timerReenvio);
         btn.disabled    = false;
@@ -422,9 +395,6 @@
     }, 1000);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // REENVÍO — pide un código nuevo real al backend
-  // ══════════════════════════════════════════════════════════════
   async function reenviarCodigo() {
     const alerta = document.getElementById('recoverAlert');
 
@@ -440,9 +410,6 @@
     iniciarCountdownReenvio();
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // PASO 3 — Nueva contraseña
-  // ══════════════════════════════════════════════════════════════
   function evaluarFuerza(valor) {
     const fill  = document.getElementById('strengthFill');
     const label = document.getElementById('strengthLabel');
