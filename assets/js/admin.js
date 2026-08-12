@@ -1,11 +1,7 @@
-//correo: 'admin@juarezobserva.mx',
-//password: 'Admin#2026'
-
 const API_BASE_ADMIN = 'https://ojito-a9d2.onrender.com/api';
 
-const DURACION_SESION_ADMIN_MS = 8 * 60 * 60 * 1000; // 8 horas
+const DURACION_SESION_ADMIN_MS = 8 * 60 * 60 * 1000;
 
-// ── verificación de credenciales administrador ────────────────
 async function verificarCredencialesAdmin(correo, password) {
 
   const passwordHash = await hashPassword(password);
@@ -28,7 +24,6 @@ async function verificarCredencialesAdmin(correo, password) {
   return { admin: datos.admin, token: datos.token };
 }
 
-// ── sesión ──────────────────────────────────────────────────
 function crearSesionAdmin(correo, nombre = 'Administrador', token) {
   const sesion = {
     correo, nombre, rol: 'administrador', token,
@@ -58,11 +53,6 @@ function cerrarSesionAdmin(redirectUrl = 'login.html') {
   window.location.href = redirectUrl;
 }
 
-// ══════════════════════════════════════════════════════════════
-// REPORTES — endpoints reales de administrador (sin restricción
-// de institución, a diferencia de institucion.js)
-// ══════════════════════════════════════════════════════════════
-
 function _headersAdmin() {
   const sesion = obtenerSesionAdmin();
   return {
@@ -80,7 +70,6 @@ async function obtenerTodosLosReportesAdmin() {
   }
   const datos = await respuesta.json();
 
-  // Mapeo a la forma que ya usa administrador_dashboard.html
   return datos.map(r => ({
     id: r._id,
     categoria: r.tipo,
@@ -131,10 +120,6 @@ async function eliminarReporteAdmin(id) {
   if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudo eliminar el reporte.');
   return true;
 }
-
-// ══════════════════════════════════════════════════════════════
-// USUARIOS — endpoints reales de administrador
-// ══════════════════════════════════════════════════════════════
 
 async function obtenerUsuariosAdmin() {
   const respuesta = await fetch(`${API_BASE_ADMIN}/admin/usuarios`, { headers: _headersAdmin() });
@@ -190,10 +175,6 @@ async function crearUsuarioAdmin({ nombre, correo, telefono, password }) {
   if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudo crear el usuario.');
   return datos.usuario;
 }
-
-// ══════════════════════════════════════════════════════════════
-// INSTITUCIONES — endpoints reales de administrador
-// ══════════════════════════════════════════════════════════════
 
 async function obtenerInstitucionesAdmin() {
   const respuesta = await fetch(`${API_BASE_ADMIN}/admin/instituciones`, { headers: _headersAdmin() });
@@ -251,10 +232,6 @@ async function crearInstitucionAdmin({ nombre, correo, tipo, rfc, password }) {
   return datos.institucion;
 }
 
-// ══════════════════════════════════════════════════════════════
-// CATEGORÍAS — endpoints reales
-// ══════════════════════════════════════════════════════════════
-
 async function obtenerCategoriasAdmin() {
   const respuesta = await fetch(`${API_BASE_ADMIN}/categorias`);
   if (!respuesta.ok) throw new Error('No se pudieron cargar las categorías.');
@@ -281,6 +258,16 @@ async function editarCategoriaAdmin(id, { nombre, color, icono, institucion }) {
   return datos.categoria;
 }
 
+async function cambiarEstadoCategoriaAdmin(id, estado) {
+  const respuesta = await fetch(`${API_BASE_ADMIN}/admin/categorias/${id}/estado`, {
+    method: 'PUT', headers: _headersAdmin(),
+    body: JSON.stringify({ estado })
+  });
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudo cambiar el estado de la categoría.');
+  return datos.categoria;
+}
+
 async function eliminarCategoriaAdmin(id) {
   const respuesta = await fetch(`${API_BASE_ADMIN}/admin/categorias/${id}`, {
     method: 'DELETE', headers: _headersAdmin()
@@ -289,10 +276,6 @@ async function eliminarCategoriaAdmin(id) {
   if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudo eliminar la categoría.');
   return true;
 }
-
-// ══════════════════════════════════════════════════════════════
-// PARÁMETROS — endpoints reales
-// ══════════════════════════════════════════════════════════════
 
 async function obtenerParametrosAdmin() {
   const respuesta = await fetch(`${API_BASE_ADMIN}/admin/parametros`);
