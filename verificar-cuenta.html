@@ -11,7 +11,6 @@
 
 <div class="auth">
 
-  <!-- ============ PANEL DE MARCA ============ -->
   <section class="auth__showcase">
     <div class="watch-grid" id="verificarGrid" aria-hidden="true">
       <div class="watch-grid__lines"></div>
@@ -48,7 +47,6 @@
     </div>
   </section>
 
-  <!-- ============ PANEL DE FORMULARIO ============ -->
   <section class="auth__panel">
     <div class="auth__form-wrap">
 
@@ -62,7 +60,6 @@
 
       <div class="alert" id="verificarAlert"></div>
 
-      <!-- ══ PANEL: CÓDIGO ══ -->
       <div class="recover-panel recover-panel--active" id="panelCodigo">
         <div class="info-box" id="infoCorreoEnviado">
           <span>✅</span>
@@ -99,7 +96,6 @@
         <a href="registro.html" class="back-link">← Usar otro correo</a>
       </div>
 
-      <!-- ══ PANEL: ÉXITO ══ -->
       <div class="recover-panel" id="panelExito">
         <div class="success-icon">🎉</div>
         <div class="success-title">¡Cuenta verificada!</div>
@@ -120,9 +116,6 @@
 <script src="assets/js/app.js"></script>
 <script>
 
-  // ══════════════════════════════════════════════════════════════
-  // ESTADO — el correo viene por query string desde registro.html
-  // ══════════════════════════════════════════════════════════════
   const _params    = new URLSearchParams(window.location.search);
   let _correoUser  = (_params.get('correo') || '').trim();
   let _timerReenvio = null;
@@ -132,7 +125,6 @@
     pintarRetícula('verificarGrid', 16);
 
     if (!_correoUser) {
-      // No llegó correo por la URL — probablemente entraron directo a la página.
       const alerta = document.getElementById('verificarAlert');
       mostrarAlerta(alerta, 'No encontramos el correo a verificar. Regístrate de nuevo o inicia sesión.', 'error');
       document.querySelector('#panelCodigo .btn--primary').disabled = true;
@@ -142,7 +134,6 @@
 
     iniciarCountdownReenvio();
 
-    // Inputs del código: auto-avance, backspace, pegado
     const celdas = document.querySelectorAll('.code-inputs input');
     celdas.forEach((celda, idx) => {
       celda.addEventListener('input', (e) => {
@@ -191,16 +182,6 @@
     });
   }
 
-  // ── Reenvío con countdown (mismo patrón que recuperar.html) ───
-  //
-  // 👇 IMPORTANTE: al terminar el countdown anterior, hacíamos
-  // btn.textContent = 'Reenviar código', lo que borraba el
-  // <span id="countdownReenvio"> que vivía DENTRO del botón.
-  // La siguiente vez que se llamaba a esta función, ese span ya
-  // no existía en el DOM y fallaba con "Cannot set properties of
-  // null". La solución: reconstruir el HTML del botón (con su
-  // span) cada vez que arrancamos el contador, en vez de asumir
-  // que el span sigue ahí.
   function iniciarCountdownReenvio() {
     const btn = document.getElementById('btnReenviar');
     let secs  = 30;
@@ -238,7 +219,6 @@
     iniciarCountdownReenvio();
   }
 
-  // ── Verificar y activar la cuenta ──────────────────────────────
   async function verificarCuenta() {
     const codigo  = obtenerCodigoIngresado();
     const errorEl = document.getElementById('errorCodigo');
@@ -259,8 +239,11 @@
 
       clearInterval(_timerReenvio);
 
-      document.querySelectorAll('.recover-panel').forEach(p => p.classList.remove('recover-panel--active'));
-      document.getElementById('panelExito').classList.add('recover-panel--active');
+      mostrarAlerta(document.getElementById('verificarAlert'), '✅ Cuenta verificada. Te estamos llevando al inicio de sesión…', 'success');
+
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 1200);
 
     } catch (err) {
       errorEl.textContent   = err.message;
