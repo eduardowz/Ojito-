@@ -16,7 +16,6 @@ router.get("/", (req, res) => {
     res.json({ mensaje: "Ruta de administradores funcionando" });
 });
 
-// Login administrador
 router.post("/login", async (req, res) => {
 
     try {
@@ -60,12 +59,6 @@ router.post("/login", async (req, res) => {
 
 });
 
-// ══════════════════════════════════════════════════════════════
-// GESTIÓN DE REPORTES (admin) — sin restricción de institución,
-// a diferencia de las rutas equivalentes en reporteRoutes.js
-// ══════════════════════════════════════════════════════════════
-
-// Obtener TODOS los reportes, sin filtrar por institución
 router.get("/reportes", authAdmin, async (req, res) => {
 
     try {
@@ -82,7 +75,6 @@ router.get("/reportes", authAdmin, async (req, res) => {
 
 });
 
-// Cambiar estado de cualquier reporte (sin validar dueño, el admin puede todo)
 router.put("/reportes/:id/estado", authAdmin, async (req, res) => {
 
     try {
@@ -118,7 +110,6 @@ router.put("/reportes/:id/estado", authAdmin, async (req, res) => {
 
 });
 
-// Reasignar institución de un reporte
 router.put("/reportes/:id/institucion", authAdmin, async (req, res) => {
 
     try {
@@ -143,7 +134,6 @@ router.put("/reportes/:id/institucion", authAdmin, async (req, res) => {
 
 });
 
-// Eliminar cualquier reporte, sin restricción de estado (el admin sí puede aunque no esté "pendiente")
 router.delete("/reportes/:id", authAdmin, async (req, res) => {
 
     try {
@@ -163,10 +153,6 @@ router.delete("/reportes/:id", authAdmin, async (req, res) => {
     }
 
 });
-
-// ══════════════════════════════════════════════════════════════
-// GESTIÓN DE USUARIOS (ciudadanos) — solo administrador
-// ══════════════════════════════════════════════════════════════
 
 router.get("/usuarios", authAdmin, async (req, res) => {
     try {
@@ -268,10 +254,6 @@ router.post("/usuarios", authAdmin, async (req, res) => {
     }
 });
 
-// ══════════════════════════════════════════════════════════════
-// GESTIÓN DE INSTITUCIONES — solo administrador
-// ══════════════════════════════════════════════════════════════
-
 router.get("/instituciones", authAdmin, async (req, res) => {
     try {
         const instituciones = await Institucion.find().sort({ createdAt: -1 });
@@ -372,10 +354,6 @@ router.post("/instituciones", authAdmin, async (req, res) => {
     }
 });
 
-// ══════════════════════════════════════════════════════════════
-// GESTIÓN DE CATEGORÍAS — solo administrador
-// ══════════════════════════════════════════════════════════════
-
 function generarClave(nombre) {
     return nombre
         .toString()
@@ -415,8 +393,6 @@ router.post("/categorias", authAdmin, async (req, res) => {
     }
 });
 
-// Nota: la "clave" NUNCA se edita aquí a propósito — es lo que mantiene
-// la relación con los reportes ya existentes.
 router.put("/categorias/:id", authAdmin, async (req, res) => {
     try {
         const { nombre, color, icono, institucion } = req.body;
@@ -440,25 +416,55 @@ router.put("/categorias/:id", authAdmin, async (req, res) => {
     }
 });
 
-router.delete("/categorias/:id", authAdmin, async (req, res) => {
+router.put("/categorias/:id/estado", authAdmin, async (req, res) => {
     try {
-        const categoria = await Categoria.findByIdAndDelete(req.params.id);
+        const { estado } = req.body;
+
+        if (!["activa", "suspendida"].includes(estado)) {
+            return res.status(400).json({ mensaje: "Estado no válido." });
+        }
+
+        const categoria = await Categoria.findById(req.params.id);
         if (!categoria) {
             return res.status(404).json({ mensaje: "Categoría no encontrada." });
         }
+
+        categoria.estado = estado;
+        await categoria.save();
+
+        res.json({ mensaje: "Estado de la categoría actualizado correctamente.", categoria });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ mensaje: "Error al actualizar el estado de la categoría." });
+    }
+});
+
+router.delete("/categorias/:id", authAdmin, async (req, res) => {
+    try {
+        const categoria = await Categoria.findById(req.params.id);
+        if (!categoria) {
+            return res.status(404).json({ mensaje: "Categoría no encontrada." });
+        }
+
+        const reportesAsociados = await Reporte.countDocuments({ tipo: categoria.clave });
+
+        if (reportesAsociados > 0) {
+            return res.status(409).json({
+                mensaje: `No se puede eliminar: hay ${reportesAsociados} reporte(s) usando esta categoría. Suspéndela en su lugar.`,
+                reportesAsociados
+            });
+        }
+
+        await Categoria.findByIdAndDelete(req.params.id);
         res.json({ mensaje: "Categoría eliminada correctamente." });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ mensaje: "Error al eliminar la categoría." });
     }
 });
 
-// ══════════════════════════════════════════════════════════════
-// PARÁMETROS DEL SISTEMA
-// ══════════════════════════════════════════════════════════════
-
-// GET pública — login.html y registro.html la necesitan SIN estar
-// autenticados como admin (por eso no lleva authAdmin aquí).
 router.get("/parametros", async (req, res) => {
     try {
         let parametros = await Parametros.findOne();
