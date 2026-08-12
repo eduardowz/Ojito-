@@ -11,7 +11,6 @@
 
 <div class="auth">
 
-  <!-- ============ PANEL DE MARCA ============ -->
   <section class="auth__showcase">
     <div class="watch-grid" id="registroGrid" aria-hidden="true">
       <div class="watch-grid__lines"></div>
@@ -48,7 +47,6 @@
     </div>
   </section>
 
-  <!-- ============ PANEL DE FORMULARIO ============ -->
   <section class="auth__panel">
     <div class="auth__form-wrap">
 
@@ -76,6 +74,13 @@
           <label for="correo">Correo electrónico</label>
           <input class="input" type="email" id="correo" name="correo"
                  placeholder="tu@correo.com" autocomplete="email" required>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field" id="campoCorreoConfirmacion">
+          <label for="correoConfirmacion">Confirmar correo electrónico</label>
+          <input class="input" type="email" id="correoConfirmacion" name="correoConfirmacion"
+                 placeholder="Repite tu correo" autocomplete="off" required>
           <span class="field-error"></span>
         </div>
 
@@ -156,23 +161,15 @@
 <script src="assets/js/app.js"></script>
 <script>
 
-  // ══════════════════════════════════════════════════════════════
-  // REGEX TELÉFONO
-  // ══════════════════════════════════════════════════════════════
   const REGEX_TELEFONO = /^\d{10}$/;
 
-  // Captcha propio de esta página
   let _captchaRegistro = '';
 
-  // ══════════════════════════════════════════════════════════════
-  // INICIALIZACIÓN
-  // ══════════════════════════════════════════════════════════════
   document.addEventListener('DOMContentLoaded', async () => {
 
     pintarRetícula('registroGrid', 16);
     generarCaptchaRegistro();
 
-    // Verificar si el registro está abierto antes de dejar usar el formulario
     const parametros = await consultarParametros();
     if (parametros && parametros.registroAbierto === false) {
       const alerta = document.getElementById('registroAlert');
@@ -180,10 +177,9 @@
 
       const form = document.getElementById('formRegistro');
       form.querySelectorAll('input, button').forEach(el => el.disabled = true);
-      return; // no seguimos configurando listeners de un form deshabilitado
+      return;
     }
 
-    // Formato automático del teléfono mientras escribe
     document.getElementById('telefono').addEventListener('input', (e) => {
       let val = e.target.value.replace(/\D/g, '').slice(0, 10);
       if (val.length > 6)      val = val.slice(0,3) + ' ' + val.slice(3,6) + ' ' + val.slice(6);
@@ -191,7 +187,10 @@
       e.target.value = val;
     });
 
-    // Submit
+    ['correo', 'correoConfirmacion'].forEach(id => {
+      document.getElementById(id).addEventListener('paste', (e) => e.preventDefault());
+    });
+
     document.getElementById('formRegistro').addEventListener('submit', (e) => {
       e.preventDefault();
       handleRegistro();
@@ -199,9 +198,6 @@
 
   });
 
-  // ══════════════════════════════════════════════════════════════
-  // CAPTCHA — mismo estilo canvas que login.html
-  // ══════════════════════════════════════════════════════════════
   function generarCaptchaRegistro(canvasId = 'captchaCanvas') {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
@@ -257,9 +253,6 @@
     document.getElementById('captchaInput').value = '';
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // BARRA DE FUERZA DE CONTRASEÑA
-  // ══════════════════════════════════════════════════════════════
   function evaluarFuerzaRegistro(valor) {
     const fill  = document.getElementById('strengthFill');
     const label = document.getElementById('strengthLabel');
@@ -285,21 +278,18 @@
     label.style.color     = nivel.color;
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // VALIDACIÓN Y SUBMIT
-  // ══════════════════════════════════════════════════════════════
   async function handleRegistro() {
-    const alerta       = document.getElementById('registroAlert');
-    const nombre       = document.getElementById('nombre');
-    const correo       = document.getElementById('correo');
-    const telefono     = document.getElementById('telefono');
-    const password     = document.getElementById('password');
-    const confirmacion = document.getElementById('confirmacion');
-    const captchaInput = document.getElementById('captchaInput');
-    const terminos     = document.getElementById('terminos');
-    let valido         = true;
+    const alerta             = document.getElementById('registroAlert');
+    const nombre              = document.getElementById('nombre');
+    const correo              = document.getElementById('correo');
+    const correoConfirmacion  = document.getElementById('correoConfirmacion');
+    const telefono            = document.getElementById('telefono');
+    const password            = document.getElementById('password');
+    const confirmacion        = document.getElementById('confirmacion');
+    const captchaInput        = document.getElementById('captchaInput');
+    const terminos            = document.getElementById('terminos');
+    let valido                = true;
 
-    // ── Nombre ────────────────────────────────────────────────
     if (nombre.value.trim().length < 3) {
       mostrarError(document.getElementById('campoNombre'), 'Ingresa tu nombre completo (mínimo 3 caracteres).');
       valido = false;
@@ -307,7 +297,6 @@
       limpiarError(document.getElementById('campoNombre'));
     }
 
-    // ── Correo ────────────────────────────────────────────────
     if (!REGEX_CORREO.test(correo.value.trim())) {
       mostrarError(document.getElementById('campoCorreo'), 'Ingresa un correo electrónico válido.');
       valido = false;
@@ -315,7 +304,13 @@
       limpiarError(document.getElementById('campoCorreo'));
     }
 
-    // ── Teléfono ──────────────────────────────────────────────
+    if (correoConfirmacion.value.trim().toLowerCase() !== correo.value.trim().toLowerCase() || correoConfirmacion.value.trim().length === 0) {
+      mostrarError(document.getElementById('campoCorreoConfirmacion'), 'Los correos no coinciden.');
+      valido = false;
+    } else {
+      limpiarError(document.getElementById('campoCorreoConfirmacion'));
+    }
+
     const telLimpio = telefono.value.replace(/\D/g, '');
     if (!REGEX_TELEFONO.test(telLimpio)) {
       mostrarError(document.getElementById('campoTelefono'), 'Ingresa un número a 10 dígitos.');
@@ -324,7 +319,6 @@
       limpiarError(document.getElementById('campoTelefono'));
     }
 
-    // ── Contraseña ────────────────────────────────────────────
     if (password.value.length < 8) {
       mostrarError(document.getElementById('campoPassword'), 'Tu contraseña debe tener al menos 8 caracteres.');
       valido = false;
@@ -332,7 +326,6 @@
       limpiarError(document.getElementById('campoPassword'));
     }
 
-    // ── Confirmación ──────────────────────────────────────────
     if (confirmacion.value !== password.value || confirmacion.value.length === 0) {
       mostrarError(document.getElementById('campoConfirmacion'), 'Las contraseñas no coinciden.');
       valido = false;
@@ -340,7 +333,6 @@
       limpiarError(document.getElementById('campoConfirmacion'));
     }
 
-    // ── Captcha ───────────────────────────────────────────────
     if (captchaInput.value.trim().toUpperCase() !== _captchaRegistro) {
       mostrarError(document.getElementById('campoCaptcha'), 'El código no coincide. Intenta de nuevo.');
       generarCaptchaRegistro();
@@ -349,7 +341,6 @@
       limpiarError(document.getElementById('campoCaptcha'));
     }
 
-    // ── Términos ──────────────────────────────────────────────
     if (!terminos.checked) {
       mostrarError(document.getElementById('campoTerminos'), 'Debes aceptar los términos para continuar.');
       valido = false;
@@ -362,7 +353,6 @@
       return;
     }
 
-    // ✅ Todo correcto — hashear contraseña (SHA-256) y guardar usuario
     const btn = document.querySelector('#formRegistro .btn--primary');
     btn.disabled    = true;
     btn.textContent = 'Creando cuenta…';
@@ -381,8 +371,6 @@
         'success'
       );
 
-      // 👇 NUEVO: en vez de resetear el formulario, llevamos al usuario
-      // a la pantalla donde captura el código de verificación.
       setTimeout(() => {
         window.location.href = 'verificar-cuenta.html?correo=' + encodeURIComponent(correo.value.trim());
       }, 1200);
