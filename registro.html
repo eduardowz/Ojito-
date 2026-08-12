@@ -6,6 +6,62 @@
 <link rel="icon" type="image/png" href="logo/logo.png">
 <title>Crear cuenta · Juárez Observa</title>
 <link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  /* ── Modal de aviso de privacidad / términos de uso ────────── */
+  .jo-legal-overlay{
+    position:fixed;inset:0;background:rgba(15,20,15,.55);
+    opacity:0;pointer-events:none;transition:opacity .15s;
+    display:flex;align-items:center;justify-content:center;
+    z-index:80;padding:20px;
+  }
+  .jo-legal-overlay.is-open{opacity:1;pointer-events:auto;}
+  .jo-legal-modal{
+    background:#fff;border-radius:14px;width:640px;max-width:100%;
+    max-height:86vh;display:flex;flex-direction:column;overflow:hidden;
+    transform:translateY(10px);transition:transform .15s;
+    font-family:inherit;
+  }
+  .jo-legal-overlay.is-open .jo-legal-modal{transform:translateY(0);}
+  .jo-legal-modal__header{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    padding:22px 24px 0;
+  }
+  .jo-legal-modal__title{font-size:20px;font-weight:700;color:#1F1D2B;margin:0;}
+  .jo-legal-modal__close{
+    background:none;border:none;font-size:20px;cursor:pointer;color:#847f97;
+    line-height:1;padding:4px;
+  }
+  .jo-legal-tabs{
+    display:flex;gap:6px;padding:16px 24px 0;border-bottom:1px solid rgba(31,29,43,.10);
+  }
+  .jo-legal-tab{
+    padding:9px 14px;border:none;background:none;cursor:pointer;
+    font-size:13.5px;font-weight:600;color:#847f97;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .jo-legal-tab.is-active{color:#18662d;border-bottom-color:#18662d;}
+  .jo-legal-modal__body{
+    padding:20px 24px 8px;overflow-y:auto;font-size:13.5px;line-height:1.7;color:#3a3750;
+  }
+  .jo-legal-modal__body h4{font-size:14.5px;color:#1F1D2B;margin:18px 0 6px;}
+  .jo-legal-modal__body h4:first-child{margin-top:0;}
+  .jo-legal-modal__body p{margin:0 0 10px;}
+  .jo-legal-modal__body ul{margin:0 0 10px;padding-left:20px;}
+  .jo-legal-panel{display:none;}
+  .jo-legal-panel.is-active{display:block;}
+  .jo-legal-modal__footer{
+    padding:16px 24px 22px;border-top:1px solid rgba(31,29,43,.10);
+    display:flex;justify-content:flex-end;gap:10px;
+  }
+  .jo-legal-btn{
+    font-weight:600;font-size:13.5px;padding:9px 18px;border-radius:8px;
+    border:1px solid #18662d;background:#18662d;color:#fff;cursor:pointer;
+  }
+  .jo-legal-link{
+    color:#18662d;text-decoration:underline;cursor:pointer;background:none;
+    border:none;padding:0;font:inherit;
+  }
+</style>
 </head>
 <body>
 
@@ -142,7 +198,11 @@
         <div class="field" id="campoTerminos">
           <label class="checkbox-row" for="terminos">
             <input type="checkbox" id="terminos" name="terminos" required>
-            Acepto el aviso de privacidad y los términos de uso de Juárez Observa
+            Acepto el
+            <button type="button" class="jo-legal-link" data-abrir-legal="privacidad">aviso de privacidad</button>
+            y los
+            <button type="button" class="jo-legal-link" data-abrir-legal="terminos">términos de uso</button>
+            de Juárez Observa
           </label>
           <span class="field-error"></span>
         </div>
@@ -158,6 +218,79 @@
 
 </div>
 
+<!-- ═══════════════ MODAL: AVISO DE PRIVACIDAD / TÉRMINOS ═══════════════ -->
+<div class="jo-legal-overlay" id="legalOverlay">
+  <div class="jo-legal-modal">
+    <div class="jo-legal-modal__header">
+      <h3 class="jo-legal-modal__title">Aviso de privacidad y términos de uso</h3>
+      <button type="button" class="jo-legal-modal__close" id="legalClose" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="jo-legal-tabs">
+      <button type="button" class="jo-legal-tab is-active" data-legal-tab="privacidad">Aviso de privacidad</button>
+      <button type="button" class="jo-legal-tab" data-legal-tab="terminos">Términos de uso</button>
+    </div>
+
+    <div class="jo-legal-modal__body">
+
+      <div class="jo-legal-panel is-active" id="panel-privacidad">
+        <h4>1. Responsable del tratamiento de datos</h4>
+        <p>Juárez Observa ("la plataforma") es responsable del uso, tratamiento y protección de los datos personales que nos proporcionas al crear una cuenta y usar nuestros servicios de reporte ciudadano.</p>
+
+        <h4>2. Datos que recabamos</h4>
+        <ul>
+          <li>Nombre completo</li>
+          <li>Correo electrónico</li>
+          <li>Número de teléfono celular</li>
+          <li>Ubicación aproximada de los reportes que generes</li>
+          <li>Historial de reportes y su estado</li>
+        </ul>
+
+        <h4>3. Finalidad</h4>
+        <p>Usamos tus datos para verificar tu identidad, permitirte crear y dar seguimiento a reportes, notificarte cambios de estado en tus reportes, y turnar la información correspondiente a las instituciones responsables de atenderla.</p>
+
+        <h4>4. Con quién compartimos tu información</h4>
+        <p>La categoría, descripción, dirección y fotografías de tus reportes se comparten con la institución municipal encargada de atenderlos. Tu nombre y datos de contacto solo son visibles para el personal autorizado de esa institución y para el equipo administrador de la plataforma, nunca de forma pública.</p>
+
+        <h4>5. Tus derechos</h4>
+        <p>Puedes solicitar en cualquier momento el acceso, corrección o eliminación de tus datos personales, o la cancelación de tu cuenta, escribiendo al correo de soporte de la plataforma.</p>
+
+        <h4>6. Seguridad</h4>
+        <p>Tu contraseña se almacena de forma cifrada y nunca es visible, ni siquiera para el equipo administrador.</p>
+      </div>
+
+      <div class="jo-legal-panel" id="panel-terminos">
+        <h4>1. Aceptación de los términos</h4>
+        <p>Al crear una cuenta en Juárez Observa aceptas usar la plataforma de forma responsable y conforme a lo descrito en este documento.</p>
+
+        <h4>2. Uso de la plataforma</h4>
+        <p>Juárez Observa te permite reportar incidentes de infraestructura y servicios urbanos (baches, fugas de agua, luminarias apagadas, entre otros) para que sean atendidos por la institución municipal correspondiente.</p>
+
+        <h4>3. Compromisos del usuario</h4>
+        <ul>
+          <li>Proporcionar información veraz en tus reportes.</li>
+          <li>No crear reportes falsos, duplicados de mala fe, o con fines de acoso hacia terceros.</li>
+          <li>No usar la plataforma para difundir contenido ofensivo, ilegal o ajeno al propósito de la aplicación.</li>
+        </ul>
+
+        <h4>4. Suspensión de cuentas</h4>
+        <p>Las cuentas que incumplan estos términos, generen reportes falsos de forma reiterada o hagan un uso indebido de la plataforma pueden ser suspendidas por el equipo administrador.</p>
+
+        <h4>5. Disponibilidad del servicio</h4>
+        <p>Los tiempos de respuesta mostrados son estimados y dependen de la capacidad operativa de cada institución conectada a la plataforma. Juárez Observa no garantiza tiempos de resolución específicos.</p>
+
+        <h4>6. Cambios a estos términos</h4>
+        <p>Podemos actualizar este documento periódicamente. Te notificaremos los cambios relevantes por correo electrónico.</p>
+      </div>
+
+    </div>
+
+    <div class="jo-legal-modal__footer">
+      <button type="button" class="jo-legal-btn" id="legalEntendido">Entendido</button>
+    </div>
+  </div>
+</div>
+
 <script src="assets/js/app.js"></script>
 <script>
 
@@ -169,6 +302,7 @@
 
     pintarRetícula('registroGrid', 16);
     generarCaptchaRegistro();
+    initLegalModal();
 
     const parametros = await consultarParametros();
     if (parametros && parametros.registroAbierto === false) {
@@ -197,6 +331,38 @@
     });
 
   });
+
+  // ══════════════════════════════════════════════════════════════
+  // MODAL: AVISO DE PRIVACIDAD / TÉRMINOS DE USO
+  // ══════════════════════════════════════════════════════════════
+  function initLegalModal(){
+    const overlay = document.getElementById('legalOverlay');
+
+    document.querySelectorAll('[data-abrir-legal]').forEach(btn => {
+      btn.addEventListener('click', () => abrirLegal(btn.dataset.abrirLegal));
+    });
+
+    document.querySelectorAll('.jo-legal-tab').forEach(tab => {
+      tab.addEventListener('click', () => activarTabLegal(tab.dataset.legalTab));
+    });
+
+    document.getElementById('legalClose').addEventListener('click', cerrarLegal);
+    document.getElementById('legalEntendido').addEventListener('click', cerrarLegal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrarLegal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarLegal(); });
+  }
+
+  function abrirLegal(tab){
+    activarTabLegal(tab || 'privacidad');
+    document.getElementById('legalOverlay').classList.add('is-open');
+  }
+  function cerrarLegal(){
+    document.getElementById('legalOverlay').classList.remove('is-open');
+  }
+  function activarTabLegal(tab){
+    document.querySelectorAll('.jo-legal-tab').forEach(t => t.classList.toggle('is-active', t.dataset.legalTab === tab));
+    document.querySelectorAll('.jo-legal-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + tab));
+  }
 
   function generarCaptchaRegistro(canvasId = 'captchaCanvas') {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
