@@ -1,13 +1,7 @@
-// ══════════════════════════════════════════════════════════════
-// JUÁREZ OBSERVA · app.js
-// Utilidades compartidas por todas las páginas
-// ══════════════════════════════════════════════════════════════
-
 const API_BASE = 'https://ojito-a9d2.onrender.com/api';
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// ── Campos y alertas ─────────────────────────────────────────
 function mostrarError(campo, mensaje) {
   campo.classList.add('field--error');
   const span = campo.querySelector('.field-error');
@@ -25,7 +19,6 @@ function mostrarAlerta(el, mensaje, tipo = 'error') {
   el.className = `alert alert--${tipo}`;
 }
 
-// ── Sesión (ciudadano) ──────────────────────────────────────
 function crearSesion(correo, nombre = 'Usuario', telefono = '', token = '') {
 
   const sesion = {
@@ -68,10 +61,6 @@ function inicialesDeNombre(nombre = '') {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
 }
 
-// ══════════════════════════════════════════════════════════════
-// FETCH AUTENTICADO — agrega el header Authorization automáticamente
-// si hay una sesión de ciudadano con token guardada.
-// ══════════════════════════════════════════════════════════════
 async function fetchAutenticado(url, opciones = {}) {
   const sesion = obtenerSesion();
   const headers = {
@@ -81,7 +70,6 @@ async function fetchAutenticado(url, opciones = {}) {
   return fetch(url, { ...opciones, headers });
 }
 
-// ── Retícula decorativa ───────────────────────────────────────
 function pintarRetícula(contenedorId, divisiones = 16) {
   const contenedor = document.getElementById(contenedorId);
   if (!contenedor) return;
@@ -98,7 +86,6 @@ function pintarRetícula(contenedorId, divisiones = 16) {
   }
 }
 
-// ── Toggle contraseña ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-toggle-password]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -110,9 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════
-// CIFRADO DE CONTRASEÑA — SHA-256 vía Web Crypto API
-// ══════════════════════════════════════════════════════════════
 async function hashPassword(password) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
@@ -121,9 +105,6 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// ══════════════════════════════════════════════════════════════
-// REGISTRO / LOGIN — conexión real al backend
-// ══════════════════════════════════════════════════════════════
 async function registrarUsuario({ nombre, correo, telefono, password }) {
 
   const passwordHash = await hashPassword(password);
@@ -183,49 +164,96 @@ async function verificarCredenciales(correo, password) {
     return null;
   }
 
-  // 👇 Ahora regresa también el token, igual que institución
   return { usuario: datos.usuario, token: datos.token };
 }
 
 // ══════════════════════════════════════════════════════════════
 // RECUPERACIÓN DE CONTRASEÑA — conexión real al backend
+//
+// El formulario de recuperación es el mismo para ciudadanos e
+// instituciones, y no le pedimos al usuario que elija su tipo de
+// cuenta. Como el backend responde con el mismo mensaje genérico
+// exista o no el correo (por seguridad), aquí probamos AMBOS
+// endpoints (usuarios e instituciones) y usamos el que sí
+// corresponda a la cuenta real. `_tipoCuentaRecuperacion` recuerda
+// cuál de los dos funcionó, para usar el mismo en los pasos
+// siguientes (verificar código y restablecer contraseña).
 // ══════════════════════════════════════════════════════════════
 
-async function solicitarRecuperacion(correo) {
-  const respuesta = await fetch(`${API_BASE}/usuarios/solicitar-recuperacion`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ correo: correo.trim().toLowerCase() })
-  });
+let _tipoCuentaRecuperacion = null; // 'usuarios' | 'instituciones'
 
-  const datos = await respuesta.json();
-  if (!respuesta.ok) throw new Error(datos.mensaje);
-  return datos;
+async function solicitarRecuperacion(correo) {
+  const correoLimpio = correo.trim().toLowerCase();
+
+  const [resUsuario, resInstitucion] = await Promise.allSettled([
+    fetch(`${API_BASE}/usuarios/solicitar-recuperacion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: correoLimpio })
+    }),
+    fetch(`${API_BASE}/instituciones/solicitar-recuperacion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: correoLimpio })
+    })
+  ]);
+
+  const usuarioOk     = resUsuario.status === 'fulfilled' && resUsuario.value.ok;
+  const institucionOk = resInstitucion.status === 'fulfilled' && resInstitucion.value.ok;
+
+  if (!usuarioOk && !institucionOk) {
+    throw new Error('No se pudo conectar con el servidor. Intenta de nuevo.');
+  }
+
+  return { mensaje: 'Si el correo existe, se envió un código de verificación.' };
 }
 
 async function verificarCodigoRecuperacion(correo, codigo) {
-  const respuesta = await fetch(`${API_BASE}/usuarios/verificar-codigo`, {
+  const correoLimpio = correo.trim().toLowerCase();
+  const body = JSON.stringify({ correo: correoLimpio, codigo });
+
+  const respUsuario = await fetch(`${API_BASE}/usuarios/verificar-codigo`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo })
+    body
   });
 
-  const datos = await respuesta.json();
-  if (!respuesta.ok) throw new Error(datos.mensaje);
-  return datos;
+  if (respUsuario.ok) {
+    _tipoCuentaRecuperacion = 'usuarios';
+    return await respUsuario.json();
+  }
+
+  const respInstitucion = await fetch(`${API_BASE}/instituciones/verificar-codigo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body
+  });
+
+  if (respInstitucion.ok) {
+    _tipoCuentaRecuperacion = 'instituciones';
+    return await respInstitucion.json();
+  }
+
+  const datosError = await respUsuario.json();
+  throw new Error(datosError.mensaje || 'El código no es correcto.');
 }
 
 async function restablecerPassword(correo, codigo, password) {
   const passwordHash = await hashPassword(password);
+  const correoLimpio = correo.trim().toLowerCase();
 
-  const respuesta = await fetch(`${API_BASE}/usuarios/restablecer-password`, {
+  const tipo = _tipoCuentaRecuperacion || 'usuarios';
+
+  const respuesta = await fetch(`${API_BASE}/${tipo}/restablecer-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ correo: correo.trim().toLowerCase(), codigo, passwordHash })
+    body: JSON.stringify({ correo: correoLimpio, codigo, passwordHash })
   });
 
   const datos = await respuesta.json();
   if (!respuesta.ok) throw new Error(datos.mensaje);
+
+  _tipoCuentaRecuperacion = null;
   return datos;
 }
 
